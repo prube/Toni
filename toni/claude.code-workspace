@@ -1,0 +1,17 @@
+{
+	"folders": [
+		{
+			"name": "claude",
+			"path": "../.."
+		},
+		{
+			"name": "V03_205_RUBE_EN",
+			"uri": "abap:/repotree-v1/V03_205_RUBE_EN"
+		},
+		{
+			"name": "RD6_100_RUBE_EN",
+			"uri": "abap:/repotree-v1/RD6_100_RUBE_EN"
+		}
+	],
+	"settings": {}
+}
