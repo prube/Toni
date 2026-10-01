@@ -134,6 +134,7 @@ def run_with_cortex(
     model: str = "claude-sonnet-4-6",
     dry_run: bool = False,
     seed: int = 42,
+    policy_len: int = 2,
 ) -> None:
 
     print_header()
@@ -157,7 +158,8 @@ def run_with_cortex(
 
     # ── Agent und Umwelt ────────────────────────────────────────────────── #
     env = GridWorld(size=9, seed=seed)
-    agent = Toni(env, start_pos=(4, 4), use_pymdp=True, use_northoff=True)
+    agent = Toni(env, start_pos=(4, 4), use_pymdp=True, use_northoff=True,
+                 policy_len=policy_len)
 
     print(f"  Simulation: {BOLD}{steps} Schritte{RESET}  "
           f"Reflexion alle {BOLD}{reflect_every}{RESET} Schritte")
@@ -238,6 +240,8 @@ def main() -> None:
                         help="Keine API-Aufrufe (testet nur die Simulation)")
     parser.add_argument("--seed", type=int, default=42,
                         help="Zufalls-Seed für die GridWorld (default: 42)")
+    parser.add_argument("--policy-len", type=int, default=2,
+                        help="AIF Planungshorizont in Schritten (default: 2, empfohlen: 4-5)")
 
     args = parser.parse_args()
 
@@ -247,6 +251,7 @@ def main() -> None:
         model=args.model,
         dry_run=args.dry_run,
         seed=args.seed,
+        policy_len=args.policy_len,
     )
 
 

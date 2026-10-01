@@ -109,6 +109,8 @@ def main() -> None:
     parser.add_argument("--model", type=str, default="claude-sonnet-4-6")
     parser.add_argument("--dry-run", action="store_true",
                         help="Kein LLM-Aufruf")
+    parser.add_argument("--policy-len", type=int, default=2,
+                        help="AIF Planungshorizont in Schritten (default: 2, empfohlen: 4-5)")
     args = parser.parse_args()
 
     print(f"\n{BOLD}{C}{'═'*72}{RESET}")
@@ -131,8 +133,10 @@ def main() -> None:
 
     # Zwei Agenten mit verschiedenen Startpositionen
     size = env.size
-    toni_a = Toni(env, start_pos=(1, 1), agent_id="Toni-A")
-    toni_b = Toni(env, start_pos=(size - 2, size - 2), agent_id="Toni-B")
+    toni_a = Toni(env, start_pos=(1, 1), agent_id="Toni-A",
+                  policy_len=args.policy_len)
+    toni_b = Toni(env, start_pos=(size - 2, size - 2), agent_id="Toni-B",
+                  policy_len=args.policy_len)
 
     # LLM-Kortex (optional)
     cortex: Optional[LLMCortex] = None

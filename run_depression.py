@@ -101,6 +101,8 @@ def main() -> None:
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--depression", type=float, default=1.0,
                         help="Depressions-Stärke [0.0=gesund, 1.0=voll depressiv]")
+    parser.add_argument("--policy-len", type=int, default=2,
+                        help="AIF Planungshorizont in Schritten (default: 2, empfohlen: 4-5)")
     args = parser.parse_args()
 
     print(f"\n{BOLD}{M}{'═'*72}{RESET}")
@@ -125,9 +127,9 @@ def main() -> None:
     np.random.seed(args.seed)
 
     healthy   = Toni(env_h, start_pos=(4, 4), agent_id="Gesund",
-                     depression_level=0.0)
+                     depression_level=0.0, policy_len=args.policy_len)
     depressed = Toni(env_d, start_pos=(4, 4), agent_id="Depressiv",
-                     depression_level=args.depression)
+                     depression_level=args.depression, policy_len=args.policy_len)
 
     # ── LLM-Kortex ── #
     cortex: Optional[LLMCortex] = None

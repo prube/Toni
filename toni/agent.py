@@ -53,7 +53,8 @@ class Toni:
                  use_northoff: bool = True,
                  use_temporal_self: bool = True,
                  agent_id: str = "toni",
-                 depression_level: float = 0.0):
+                 depression_level: float = 0.0,
+                 policy_len: int = 2):
         self.env = env
         self.depression_level = float(np.clip(depression_level, 0.0, 1.0))
         d = self.depression_level
@@ -77,7 +78,7 @@ class Toni:
         self._aif: object | None = None
         if use_pymdp:
             from .active_inference import NavigationAIF
-            self._aif = NavigationAIF(env_size=env.size)
+            self._aif = NavigationAIF(env_size=env.size, policy_len=policy_len)
 
         # Startposition
         mid = env.size // 2

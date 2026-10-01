@@ -301,10 +301,11 @@ def render_precision_arousal(ax, history, max_points=200):
 
 # ── Hauptfunktionen ──────────────────────────────────────────────────── #
 
-def run_headless(steps: int = 1000, print_every: int = 50) -> None:
+def run_headless(steps: int = 1000, print_every: int = 50,
+                 policy_len: int = 2) -> None:
     """Simulation ohne GUI."""
     env = GridWorld(size=9, seed=42)
-    agent = Toni(env, start_pos=(4, 4))
+    agent = Toni(env, start_pos=(4, 4), policy_len=policy_len)
 
     print("═" * 60)
     print(" Toni startet  (Northoff + Solms Prototyp)")
@@ -332,13 +333,14 @@ def run_headless(steps: int = 1000, print_every: int = 50) -> None:
     print("═" * 60)
 
 
-def run_live(steps: int = 2000, update_every: int = 5) -> None:
+def run_live(steps: int = 2000, update_every: int = 5,
+             policy_len: int = 2) -> None:
     """Simulation mit Live-Matplotlib-Dashboard."""
     import matplotlib.pyplot as plt
     import matplotlib.animation as animation
 
     env = GridWorld(size=9, seed=42)
-    agent = Toni(env, start_pos=(4, 4))
+    agent = Toni(env, start_pos=(4, 4), policy_len=policy_len)
 
     fig, axes = make_figure(env.size)
 
@@ -384,13 +386,17 @@ if __name__ == "__main__":
                         help="Schritte pro Animations-Frame (default: 5)")
     parser.add_argument("--print-every", type=int, default=50,
                         help="Headless: Status alle N Schritte (default: 50)")
+    parser.add_argument("--policy-len", type=int, default=2,
+                        help="AIF Planungshorizont in Schritten (default: 2, empfohlen: 4-5)")
     args = parser.parse_args()
 
     if args.headless:
-        run_headless(steps=args.steps, print_every=args.print_every)
+        run_headless(steps=args.steps, print_every=args.print_every,
+                     policy_len=args.policy_len)
     else:
         try:
-            run_live(steps=args.steps, update_every=args.update)
+            run_live(steps=args.steps, update_every=args.update,
+                     policy_len=args.policy_len)
         except Exception as e:
             print(f"GUI nicht verfügbar ({e}), starte headless...")
-            run_headless(steps=args.steps)
+            run_headless(steps=args.steps, policy_len=args.policy_len)
