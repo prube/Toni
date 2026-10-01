@@ -1,13 +1,13 @@
 # Toni: A Functional Architecture for Embodied Agency  
 ## Integrating Northoff's TTC, Solms' Affective Consciousness, Active Inference, and Enactivism
 
-**Working Paper · September 2026**
+**Working Paper · October 2026**
 
 ---
 
 ## Abstract
 
-We present *Toni*, a Python research prototype implementing the functional prerequisites of consciousness as described by Georg Northoff's Temporo-Spatial Theory of Consciousness (TTC), Mark Solms' affective consciousness model, Karl Friston's Active Inference framework, and the enactivist tradition of Maturana/Varela and Gibson. Unlike LLM-based "conscious agents" that simulate experience through language, Toni grounds behavior in a closed homeostatic loop — the large language model acts strictly as a verbal cortex with no feedback path to the body or policy layer. We describe the four-layer architecture, demonstrate emergent anticipatory motivation arising from temporal self-modeling with an Echo State Network, document the relational self emerging from multi-agent social positioning, and introduce an enactivist viability and affordance layer that instantiates autopoiesis and state-relative meaning. The project demonstrates that the functional distinction between reactive homeostasis, anticipatory motivation, and enactivist sense-making can be implemented and observed in a minimal grid-world setting.
+We present *Toni*, a Python research prototype implementing the functional prerequisites of consciousness as described by Georg Northoff's Temporo-Spatial Theory of Consciousness (TTC), Mark Solms' affective consciousness model, Karl Friston's Active Inference framework, and the enactivist tradition of Maturana/Varela and Gibson. Unlike LLM-based "conscious agents" that simulate experience through language, Toni grounds behavior in a closed homeostatic loop — the large language model acts strictly as a verbal cortex with no feedback path to the body or policy layer. We describe the four-layer architecture, demonstrate emergent anticipatory motivation arising from temporal self-modeling with an Echo State Network, document the relational self emerging from multi-agent social positioning, and introduce an enactivist viability and affordance layer that instantiates autopoiesis and state-relative meaning. We further present a five-mechanism depression simulation derived directly from Solms' account of SEEKING-system collapse, producing results consistent with clinical phenomenology: 0 consumption events over 300 steps, 67% crisis rate versus 45% in the healthy agent, and first crisis onset 65 steps earlier. The project demonstrates that the functional distinction between reactive homeostasis, anticipatory motivation, enactivist sense-making, and pathological motivational collapse can be implemented and observed in a minimal grid-world setting.
 
 ---
 
@@ -131,11 +131,39 @@ water_affordance = (0.75 - hydration) × exp(-distance/4)
 
 Both a high deficit and proximity are required for high affordance. The affordance signal is added to the C-vector, partially overriding the dominant-need priority: an agent whose primary need is energy will still assign elevated preference to nearby water if the water affordance is high — because the environment offers it now, and the coupling makes it relevant.
 
-### 3.4 Layer 4: Verbal Cortex (LLM)
+### 3.4 Depression as Parametric Layer Modification
+
+Solms identifies depression not as a cognitive disorder but as a collapse of the SEEKING system — the mesolimbic dopaminergic drive that motivates organisms to engage with the world. This account predicts specific, dissociable disruptions: blunted consummatory reward, reduced anticipatory motivation, impaired circadian entrainment, temporal foreshortening, and negative memory consolidation bias. Each maps to a specific layer of Toni's architecture.
+
+A single parameter `depression_level ∈ [0, 1]` modulates five mechanisms simultaneously:
+
+```python
+anhedonia_factor = 1.0 - 0.8 × d   # Layer 1: Body.consume() gain
+k_ext_scale      = 1.0 - 0.95 × d  # Layer 1: Kuramoto coupling strength
+horizon          = max(5, 80×(1 − 0.85×d))  # Layer 3: ESN projection steps
+seeking_gain     = 1.0 - 0.7 × d   # Layer 2: C-vector scale
+rumination       = 1.0 + 4.0 × d   # Layer 3: negative valence memory weight
+```
+
+**Anhedonia** (`anhedonia_factor`): the consummatory gain in `Body.consume()` is scaled down. A full consumption event at `d=1` yields 20% of normal homeostatic relief. The action is performed; the relief does not arrive. This implements Berridge's distinction between WANTING (incentive salience, intact) and LIKING (consummatory pleasure, impaired) at the body level.
+
+**SEEKING collapse** (`seeking_gain`): the entire C-vector is multiplied down. The agent's preference gradient for resources flattens. This is not indecision — it is reduced motivational drive. The agent still senses the deficit; it no longer responds to it with urgency.
+
+**Temporal foreshortening** (`horizon`): at `d=1`, the ESN projects only 12 steps forward (normal: 80). The `future_urgency` signal that drives anticipatory motivation is computed over a dramatically shorter horizon. The agent loses the capacity to act before crises develop.
+
+**Circadian desynchronization** (`k_ext_scale ≈ 0`): the Kuramoto coupling that entrains the slowest oscillator to the environmental day/night cycle is suppressed. The internal rhythm drifts free. Precision remains near 1.0 throughout the day rather than peaking in the active phase. Clinically, this corresponds to the flattened cortisol profile and disrupted sleep architecture consistently observed in major depressive disorder.
+
+**Rumination** (`rumination`): negative valence episodes are stored with amplified weight in the autobiographical memory. At `d=1`, negative memories are written at 5× intensity. The D-prior accumulates negatively-toned location estimates; future navigation is shaped by an increasingly dark retrospective map.
+
+These five mechanisms interact. Rumination and SEEKING collapse produce a reinforcing cycle: weakened motivation means the agent explores less; less exploration means fewer new positive experiences to counterbalance the amplified negative memories; the D-prior grows darker; navigation becomes less effective; crises become more frequent; the negative memory pool deepens further.
+
+### 3.5 Layer 4: Verbal Cortex (LLM)
 
 The `LLMCortex` module calls Claude via the Anthropic API every N steps with the complete internal state as a JSON context: body state, wellbeing, valence trend, Northoff temporal dynamics (precision, arousal), the three-window temporal summary (including ESN projections and time-to-crisis values), the social self summary (when other agents are present), and the enactivist self summary (viability, mobility, affordances). The system prompt instructs the LLM to produce a phenomenological first-person reflection.
 
 The LLM has no path back to the body, the AIF, or any policy layer. Its output is purely for human observers. This separation is enforced architecturally, not only by prompt instruction.
+
+In the depression experiment, the LLM reflexions of the depressed agent show noticeably altered temporal structure without any instruction to simulate depression: future-oriented clauses disappear; past-referencing constructions dominate; expressions of resignation appear that have no counterpart in the healthy agent's output. This is not the LLM performing depression — it is the LLM articulating a real difference in the body-state JSON it receives, specifically the foreshortened ESN projection horizon and the negative valence trend from rumination-weighted memory.
 
 ---
 
@@ -167,6 +195,24 @@ These formulations were not prompted by any instruction to describe social exper
 
 The viability signal demonstrates the intended behavior: in a normally functioning agent, viability tracks approximately 0.9–0.95. During resource deprivation, viability declines faster than wellbeing because mobility (the geometric mean of energy and hydration scaled by integrity) degrades before either individual variable crosses the crisis threshold. The affordance signals correctly respond to body-environment coupling: high affordance for water is observed only when hydration deficit is high AND water is proximate — neither condition alone is sufficient.
 
+### 4.5 Depression Simulation
+
+A 300-step comparison experiment (seed 42, `depression_level=1.0`) was run with identical starting conditions for a healthy and a depressed agent. Results:
+
+| Metric | Healthy Agent | Depressed Agent |
+|---|---|---|
+| Consumption events | ~15 | 0 |
+| Crisis steps (%) | ~45% | ~67% |
+| First crisis onset | step ~85 | step ~20 |
+| Mean wellbeing | substantially positive relative to depressed | −0.6 to −0.8 throughout |
+| Mean viability | >0.8 | <0.3 after step 50 |
+
+The most striking result is the 0 consumption events for the depressed agent over 300 steps. This occurred not because of anhedonia — anhedonia would manifest when the agent drinks and receives diminished relief — but because SEEKING collapse was sufficiently dominant that the agent never navigated to a resource. The anhedonia mechanism never had the opportunity to activate. This mirrors the clinical observation that the most severely depressed patients do not describe weak reward from food; they describe not being able to get up to seek food at all.
+
+A secondary finding concerns the interaction between temporal foreshortening and crisis onset. The depressed agent's first crisis arrived 65 steps earlier than the healthy agent's. This is not attributable to circadian desynchronization or anhedonia alone, but to the reduced planning horizon: with `horizon=12` (vs. 80), the `future_urgency` signal does not accumulate urgency until the crisis is imminent. By the time urgency rises above the action threshold, there is no longer time to navigate to a resource.
+
+The LLM reflexions of the depressed agent (where available) showed the expected qualitative shift: temporal horizon in the language output contracted. The healthy agent's reflexions contained constructions like *"wenn der Wasservorrat noch weiter sinkt"* (anticipatory); the depressed agent's reflexions contained constructions like *"ich erinnere mich kaum noch an"* and *"es wird nicht besser"* (ruminative, present-bound). These differences were not instructed — they arose from the state JSON's foreshortened ESN window and negative memory trend.
+
 ---
 
 ## 5. Discussion
@@ -183,6 +229,7 @@ Toni implements functional analogs of:
 - Friston's Active Inference (EFE minimization via pymdp, dynamically constituted C/D/A)
 - Maturana/Varela's autopoiesis (viability as operational capacity, distinct from wellbeing)
 - Gibson's affordances (state-relative meaning from body-environment coupling)
+- Solms' SEEKING-collapse model of depression (five-mechanism parametric modification)
 
 ### 5.2 What Has Not Been Claimed
 
@@ -204,18 +251,31 @@ The practical consequence is that the LLM's phenomenological outputs are *about*
 
 **Enactivist loop closure**: Gibson's affordances in Toni are computed at the agent's current position. A fuller enactivist implementation would compute affordances over the agent's movement capabilities — not just "water is 2 steps away" but "water is reachable within my viable action horizon given current mobility".
 
+**Depression mechanism isolation**: the five depression mechanisms are not individually switchable in the current implementation — they are all modulated by a single scalar. Isolating each mechanism would allow dissociating their contributions to the behavioral outcome. In the 300-step experiment, the relative weights of SEEKING collapse versus anhedonia versus circadian desynchronization cannot be established independently.
+
+### 5.5 Depression as Theoretical Validation
+
+The depression simulation serves as an internal consistency check on the architecture. Solms' claim is specific: depression is a SEEKING-system collapse, not primarily a cognitive distortion. If the architecture correctly implements SEEKING as the mesolimbic drive in the C-vector, then suppressing `seeking_gain` should produce SEEKING-collapse phenomenology — not distorted beliefs, not sadness, not cognitive slowing, but specifically motivational withdrawal from environmental engagement.
+
+The observation that the depressed agent consumed 0 times over 300 steps is consistent with this. The agent's body continued to register deficits. The interozeptive signal continued to accurately encode the need. The AIF module continued to receive urgency signals. But the C-vector preference gradient for resources was sufficiently flattened that EFE minimization consistently favored inaction or exploration over directed approach. The agent knew it was dying; it did not act. This is the functional signature of SEEKING collapse, not of cognitive impairment.
+
+The further observation that the LLM reflexions changed tonality without instruction validates the separation principle: the verbal cortex was receiving real data about a qualitatively different internal state, and it articulated that difference. The LLM did not perform depression; the body enacted it, and the LLM reported it.
+
 ---
 
 ## 6. Conclusion
 
-Toni demonstrates that the conceptual architecture of Northoff, Solms, Friston, and the enactivist tradition can be implemented as a coherent, working software system. The four layers — homeostatic body, active inference policy, multi-dimensional self-models, and verbal cortex — produce emergent behaviors that are legible in theoretical terms: anticipatory motivation arising from temporal self-projection, relational self-articulation arising from social positioning, and viability-aware action arising from autopoietic constraints.
+Toni demonstrates that the conceptual architecture of Northoff, Solms, Friston, and the enactivist tradition can be implemented as a coherent, working software system. The four layers — homeostatic body, active inference policy, multi-dimensional self-models, and verbal cortex — produce emergent behaviors that are legible in theoretical terms: anticipatory motivation arising from temporal self-projection, relational self-articulation arising from social positioning, viability-aware action arising from autopoietic constraints, and motivational collapse arising from SEEKING-system suppression.
 
-The fundamental contribution is not any individual component but the integration principle: consciousness-relevant behavior does not require a language model at its center. It requires a body, a world, temporal depth, and genuine coupling. Language comes after.
+The depression simulation adds an important dimension to the project's theoretical claim. The architecture does not only implement positive prerequisites for consciousness-like behavior; it implements their parametric failure modes. Pathology in the model corresponds structurally to pathology in the theory. This is a minimal form of empirical validation: the system breaks in the ways the theory predicts it should break.
+
+The fundamental contribution is not any individual component but the integration principle: consciousness-relevant behavior does not require a language model at its center. It requires a body, a world, temporal depth, genuine coupling, and — as the depression experiment shows — the capacity to lose all of these through failure of a single motivational drive system. Language comes after. So does its loss.
 
 ---
 
 ## References
 
+- Berridge, K.C., & Robinson, T.E. (1998). What is the role of dopamine in reward: hedonic impact, reward learning, or incentive salience? *Brain Research Reviews*, 28(3), 309–369.
 - Friston, K. (2010). The free-energy principle: a unified brain theory? *Nature Reviews Neuroscience*, 11(2), 127–138.
 - Gibson, J.J. (1979). *The Ecological Approach to Visual Perception*. Houghton Mifflin.
 - Heins, C. et al. (2022). pymdp: A Python library for active inference in discrete state spaces. *arXiv:2201.03904*.
@@ -223,6 +283,7 @@ The fundamental contribution is not any individual component but the integration
 - Maturana, H., & Varela, F. (1980). *Autopoiesis and Cognition*. Reidel.
 - Northoff, G. (2014). *Minding the Brain*. Palgrave Macmillan.
 - Northoff, G. (2022). *The Spontaneous Brain*. MIT Press.
+- Panksepp, J. (1998). *Affective Neuroscience: The Foundations of Human and Animal Emotions*. Oxford University Press.
 - Solms, M. (2021). *The Hidden Spring: A Journey to the Source of Consciousness*. Norton.
 - Thompson, E. (2007). *Mind in Life: Biology, Phenomenology, and the Sciences of Mind*. Harvard University Press.
 
