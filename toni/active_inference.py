@@ -86,7 +86,20 @@ class NavigationAIF:
                           competition_factor=competition_factor,
                           affordances=affordances,
                           seeking_gain=seeking_gain)
-        D = self._build_D(memory_priors, social_prior)
+
+        # Urgency-Dämpfung des D-Priors: bei drohender Krise breiter suchen.
+        # Northoff: wenn die Zukunft bedrohlich projiziert wird, darf der Agent
+        # nicht auf ein einzelnes "bekanntes" Wasserfeld fixiert bleiben —
+        # Exploration wird wichtiger als Exploitation des Gedächtnisses.
+        damped_priors = memory_priors
+        if future_urgency is not None and memory_priors:
+            max_urg = float(np.max(future_urgency[:2])) if len(future_urgency) >= 2 else 0.0
+            if max_urg > 0.3:
+                # bei urg=0.3: damping=0.84, bei urg=0.7: damping=0.44, bei urg=1: damping=0.2
+                damping = max(0.2, 1.0 - max_urg * 0.8)
+                damped_priors = {k: v * damping for k, v in memory_priors.items()}
+
+        D = self._build_D(damped_priors, social_prior)
 
         # pymdp-Agent bei jedem Schritt neu initialisieren.
         # policy_len=3 → Agent plant 3 Schritte voraus → findet Ressourcen auch
@@ -178,33 +191,36 @@ class NavigationAIF:
           competition_factor: sozial (Konkurrenz um knappe Ressource)
           affordances:        enaktivistisch (Körper-Umwelt-Kopplung)
 
+        Urgency ist MULTIPLIKATIV, nicht additiv: sie skaliert den Grundwert,
+        anstatt ihn zu überschreiben. Bei niedriger Urgency bleibt die
+        Grundpräferenz; bei hoher Urgency wächst sie proportional.
         Affordanz-Boost: Ressourcen werden zusätzlich attraktiv, wenn sie
         sowohl nahbar als auch für den aktuellen Körperzustand relevant sind.
-        Das bricht die strikte Dominanz eines einzelnen Bedürfnisses auf —
-        enaktivistisch: nicht "eine Ressource oder die andere", sondern
-        "was bietet die Umwelt gerade an, gegeben wer ich bin?"
         """
         # Reaktive Dringlichkeit aus aktuellem Wohlbefinden
         current_urgency = max(0.0, -wellbeing * 2.0)
 
         # Antizipatorische Dringlichkeit aus Zukunftsprojektion
         if future_urgency is not None and len(future_urgency) > dominant_need:
-            future_boost = float(future_urgency[dominant_need]) * 3.0  # [0..3]
-            urgency = max(current_urgency, future_boost)
+            fut = float(future_urgency[dominant_need])
+            # Multiplikativ: Urgency skaliert Grundwert, überschreibt ihn nicht.
+            # urgency_scale: bei fut=0 → 1.0 (kein Boost), bei fut=1 → 2.5
+            urgency_scale = 1.0 + fut * 1.5
         else:
-            urgency = current_urgency
+            urgency_scale = 1.0 + current_urgency * 0.5
 
         # Soziale Dringlichkeit: Konkurrenz erhöht Motivation
-        urgency *= competition_factor
+        urgency_scale *= competition_factor
 
         C_vec = np.zeros(N_OBS)
         # [0]=EMPTY [1]=FOOD [2]=WATER [3]=SHELTER [4]=außerhalb
+        # Multiplikativ: Grundpräferenz × urgency_scale × seeking_gain
         if dominant_need == 0:  # Energie
-            C_vec[FOOD] = (3.0 + urgency * 1.5) * seeking_gain
+            C_vec[FOOD]  = 3.0 * urgency_scale * seeking_gain
             C_vec[WATER] = 0.5 * seeking_gain
         else:  # Hydration
-            C_vec[WATER] = (3.0 + urgency * 1.5) * seeking_gain
-            C_vec[FOOD] = 0.5 * seeking_gain
+            C_vec[WATER] = 3.0 * urgency_scale * seeking_gain
+            C_vec[FOOD]  = 0.5 * seeking_gain
         # Leerfelder sind positiv bewertet (Bewegung führt zu Ressourcen)
         C_vec[EMPTY] = 0.3
         # Shelter nur attraktiv wenn explizit benötigt (Integrity niedrig)

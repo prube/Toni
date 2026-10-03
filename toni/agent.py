@@ -223,7 +223,26 @@ class Toni:
         C (Präferenzen) kommen von Solms (dominantes Bedürfnis).
         A (Präzision) kommt von Northoff (Zeitdynamik).
         D (Prior) kommt vom autobiografischen Gedächtnis.
+
+        PANIK-OVERRIDE (Northoff: Gegenwart schlägt Zukunft bei existentieller Dringlichkeit)
+        Wenn der Agent bereits auf der benötigten Ressource steht und die Krise
+        unmittelbar ist (future_urgency > 0.9), wird sofort konsumiert — ohne
+        EFE-Planung. Verhindert Paralyse durch Überoptimierung: der D-Prior
+        auf ein "besseres" Wasserfeld weiter weg darf nicht das Trinken des
+        aktuellen Wassers blockieren.
         """
+        # PANIK-OVERRIDE: aktuelle Krise + Ressource direkt verfügbar → sofort konsumieren
+        # Reagiert auf IST-Zustand, nicht auf Projektion — verhindert dass D-Prior auf
+        # ein "besseres" Feld den Agenten von der Ressource direkt unter ihm wegnavigiert.
+        current_crisis = (
+            self.body.energy < 0.25 or
+            self.body.hydration < 0.25
+        )
+        if current_crisis:
+            resource = self.env.get_at(self.row, self.col)
+            if self._should_consume(resource):
+                return "consume"
+
         if self._aif is not None:
             # Gedächtniskarte als Positionsprior
             mem_priors = {
