@@ -86,12 +86,16 @@ class WorldModelRNN:
     #  Training (Ridge Regression)                                         #
     # ------------------------------------------------------------------ #
 
-    def fit(self, sequence: np.ndarray) -> bool:
+    def fit(self, sequence: np.ndarray, past_bias: float = 0.0) -> bool:
         """
         W_out auf der gegebenen Sequenz trainieren.
 
         Sequenz shape: (T, input_dim)
         Mindestlänge: 6 Schritte (3 Spin-up + 2 Training + 1 Target)
+
+        past_bias > 0: ältere Samples erhalten mehr Gewicht (temporale Stasis,
+          Northoff: Vergangenheit überschwemmt die Gegenwart).
+          past_bias=0: uniform (normal), past_bias=3: alte Samples ~20× stärker.
 
         Gibt True zurück bei Erfolg, False bei Fehler (zu kurz, numerisch).
         """
@@ -126,13 +130,40 @@ class WorldModelRNN:
         if len(H) < 2:
             return False
 
-        # Ridge Regression: W_out = Y.T @ H @ (H.T @ H + λI)^{-1}
-        # np.errstate: unterdrückt harmlose BLAS-interne FP-Flags
-        with np.errstate(divide='ignore', invalid='ignore', over='ignore'):
-            A = H.T @ H + self.ridge * np.eye(self.reservoir_dim)
-        try:
-            W_out = np.linalg.solve(A, H.T @ Y).T   # (input_dim, reservoir_dim)
-        except np.linalg.LinAlgError:
+        # Ridge Regression mit optionaler temporaler Gewichtung
+        # past_bias > 0: ältere Samples dominieren (Northoff temporale Stasis)
+        if past_bias > 0.0:
+            T_h = len(H)
+            idx = np.arange(T_h)
+            # w[0] (ältestes) = exp(past_bias), w[T-1] (neuestest) = 1.0
+            # Capped bei past_bias=5 um Overflow zu verhindern
+            safe_bias = min(float(past_bias), 5.0)
+            raw_w = np.exp(safe_bias * (T_h - 1 - idx) / max(T_h, 1))
+            weights = raw_w * (T_h / raw_w.sum())  # normalisiert: Summe = T_h
+            W_sq = np.diag(weights)
+            with np.errstate(divide='ignore', invalid='ignore', over='ignore'):
+                A = H.T @ W_sq @ H + self.ridge * np.eye(self.reservoir_dim)
+                rhs = H.T @ W_sq @ Y
+            # NaN/Inf-Absicherung: falls Numerik versagt → normaler (ungewichteter) Fallback
+            if not (np.isfinite(A).all() and np.isfinite(rhs).all()):
+                with np.errstate(divide='ignore', invalid='ignore', over='ignore'):
+                    A   = H.T @ H + self.ridge * np.eye(self.reservoir_dim)
+                    rhs = H.T @ Y
+            try:
+                W_out = np.linalg.solve(A, rhs).T
+            except np.linalg.LinAlgError:
+                return False
+        else:
+            # W_out = Y.T @ H @ (H.T @ H + λI)^{-1}
+            with np.errstate(divide='ignore', invalid='ignore', over='ignore'):
+                A = H.T @ H + self.ridge * np.eye(self.reservoir_dim)
+            try:
+                W_out = np.linalg.solve(A, H.T @ Y).T
+            except np.linalg.LinAlgError:
+                return False
+
+        # NaN im W_out → Trainingsfehler, nicht speichern
+        if not np.isfinite(W_out).all():
             return False
 
         self.W_out = W_out

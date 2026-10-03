@@ -46,7 +46,7 @@ class TemporalSelf:
     """
 
     def __init__(self, window: int = _WINDOW_DEFAULT, horizon: int = _HORIZON_DEFAULT,
-                 use_rnn: bool = True):
+                 use_rnn: bool = True, past_bias: float = 0.0):
         self.window  = window
         self.horizon = horizon
         self._history: deque = deque(maxlen=window)
@@ -55,6 +55,8 @@ class TemporalSelf:
         self._rnn: WorldModelRNN | None = WorldModelRNN() if use_rnn else None
         self._fit_every: int = 5       # ESN alle 5 Schritte neu trainieren
         self._steps_since_fit: int = 0
+        # Northoff temporale Stasis: past_bias > 0 lässt ältere Samples dominieren
+        self._past_bias: float = past_bias
 
     # ------------------------------------------------------------------ #
     #  Zustandsupdate                                                      #
@@ -83,7 +85,7 @@ class TemporalSelf:
             if self._steps_since_fit >= self._fit_every and len(self._history) >= 10:
                 mat = self._body_matrix()
                 if mat is not None:
-                    self._rnn.fit(mat)
+                    self._rnn.fit(mat, past_bias=self._past_bias)
                     self._steps_since_fit = 0
 
     # ------------------------------------------------------------------ #

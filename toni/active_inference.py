@@ -69,6 +69,7 @@ class NavigationAIF:
         competition_factor: float = 1.0,
         affordances: dict | None = None,
         seeking_gain: float = 1.0,
+        env_coupling_scale: float = 1.0,
     ) -> str:
         """
         Aktion über Expected Free Energy (EFE) auswählen.
@@ -81,11 +82,18 @@ class NavigationAIF:
         """
         pos_flat = row * self.size + col
 
-        A = self._build_A(grid, northoff_precision)
+        # Northoff Rest-Self-Overlap: verminderte Umweltkopplung dämpft die
+        # Wahrnehmungspräzision. Bei env_coupling_scale=0.1 sieht der Agent die
+        # Ressourcen zwar noch, aber das Wahrnehmungsmodell ist flacher —
+        # alle Felder sehen ähnlicher aus → reduzierter Navigationsimpuls.
+        coupled_precision = northoff_precision * (0.3 + 0.7 * env_coupling_scale)
+
+        A = self._build_A(grid, coupled_precision)
         C = self._build_C(dominant_need, wellbeing, future_urgency,
                           competition_factor=competition_factor,
                           affordances=affordances,
-                          seeking_gain=seeking_gain)
+                          seeking_gain=seeking_gain,
+                          env_coupling_scale=env_coupling_scale)
 
         # Urgency-Dämpfung des D-Priors: bei drohender Krise breiter suchen.
         # Northoff: wenn die Zukunft bedrohlich projiziert wird, darf der Agent
@@ -181,7 +189,8 @@ class NavigationAIF:
                  future_urgency: np.ndarray | None = None,
                  competition_factor: float = 1.0,
                  affordances: dict | None = None,
-                 seeking_gain: float = 1.0) -> np.ndarray:
+                 seeking_gain: float = 1.0,
+                 env_coupling_scale: float = 1.0) -> np.ndarray:
         """
         Log-Präferenzen über Beobachtungen (Solms + Northoff + Sozial + Enaktivismus).
 
@@ -194,8 +203,9 @@ class NavigationAIF:
         Urgency ist MULTIPLIKATIV, nicht additiv: sie skaliert den Grundwert,
         anstatt ihn zu überschreiben. Bei niedriger Urgency bleibt die
         Grundpräferenz; bei hoher Urgency wächst sie proportional.
-        Affordanz-Boost: Ressourcen werden zusätzlich attraktiv, wenn sie
-        sowohl nahbar als auch für den aktuellen Körperzustand relevant sind.
+        env_coupling_scale (Northoff Rest-Self-Overlap): skaliert Affordanz-Signale
+        herunter. Bei 0: Agent nimmt Ressourcen wahr, sie bedeuten ihm nichts —
+        die Umwelt hat keine Bedeutung mehr für den inneren Zustand.
         """
         # Reaktive Dringlichkeit aus aktuellem Wohlbefinden
         current_urgency = max(0.0, -wellbeing * 2.0)
@@ -226,11 +236,14 @@ class NavigationAIF:
         # Shelter nur attraktiv wenn explizit benötigt (Integrity niedrig)
         C_vec[SHELTER] = 0.05
 
-        # Enaktivistischer Affordanz-Boost (Gibson: state-relative Bedeutung)
+        # Enaktivistischer Affordanz-Boost — skaliert durch Umweltkopplung
+        # env_coupling_scale=1.0: normal; =0.0: Affordanzen bedeutungslos
+        # (Northoff Rest-Self-Overlap: Agent nimmt Ressource wahr, aber sie
+        # "zieht" ihn nicht mehr — Körper-Umwelt-Kopplung ist unterbrochen)
         if affordances is not None:
-            C_vec[FOOD]    += affordances.get("food", 0.0) * 2.5
-            C_vec[WATER]   += affordances.get("water", 0.0) * 2.5
-            C_vec[SHELTER] += affordances.get("shelter", 0.0) * 1.5
+            C_vec[FOOD]    += affordances.get("food", 0.0) * 2.5 * env_coupling_scale
+            C_vec[WATER]   += affordances.get("water", 0.0) * 2.5 * env_coupling_scale
+            C_vec[SHELTER] += affordances.get("shelter", 0.0) * 1.5 * env_coupling_scale
 
         C = utils.obj_array(1)
         C[0] = C_vec

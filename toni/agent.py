@@ -54,22 +54,28 @@ class Toni:
                  use_temporal_self: bool = True,
                  agent_id: str = "toni",
                  depression_level: float = 0.0,
+                 northoff_depression_level: float = 0.0,
                  policy_len: int = 2):
         self.env = env
         self.depression_level = float(np.clip(depression_level, 0.0, 1.0))
         d = self.depression_level
 
-        # Depression-Parameter (alle linear in depression_level)
+        # Solms-Mechanismen (SEEKING-Kollaps, Anhedonie, Rumination)
         anhedonia    = 1.0 - 0.8 * d   # Konsum-Gain reduziert
         k_ext_scale  = 1.0 - 0.95 * d  # zirkadianer Desynchronisation
         horizon      = max(5, int(80 * (1.0 - 0.85 * d)))  # Zeithorizont kollabiert
         self._seeking_gain   = 1.0 - 0.7 * d   # SEEKING-Antrieb gedämpft
         self._rumination     = 1.0 + 4.0 * d   # negative Erinnerungen verstärkt
 
+        # Northoff-spezifische Mechanismen (Rest-Self-Overlap, temporale Stasis)
+        nd = float(np.clip(northoff_depression_level, 0.0, 1.0))
+        self._env_coupling  = 1.0 - 0.9 * nd   # Affordanz-Blindheit (0.1 bei nd=1)
+        past_bias_val       = nd * 3.0           # Vergangenheit dominiert ESN (0→3)
+
         self.body = Body(anhedonia_factor=anhedonia)
         self.temporal = TemporalDynamics(k_ext_scale=k_ext_scale)
         self.memory = AutobiographicalMemory()
-        self.temporal_self = TemporalSelf(horizon=horizon)
+        self.temporal_self = TemporalSelf(horizon=horizon, past_bias=past_bias_val)
         self.social_self = SocialSelf()
         self.enactive_self = EnactiveSelf()
         self.use_northoff = use_northoff
@@ -279,6 +285,7 @@ class Toni:
                     competition_factor=competition,
                     affordances=self.enactive_self.aif_signal(),
                     seeking_gain=self._seeking_gain,
+                    env_coupling_scale=self._env_coupling,
                 )
                 # Post-Processing: "consume" nur wenn passende Ressource vorhanden
                 if action == "consume":
