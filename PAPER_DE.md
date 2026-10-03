@@ -170,7 +170,23 @@ Im Depressions-Experiment zeigen die LLM-Reflexionen des depressiven Agenten ein
 
 ### 4.1 Antizipatorische Motivation
 
-In einer 200-Schritt-Simulation (Seed 42) generierte das temporale Selbst eine 39-Schritte-Vorwarnung vor der Hydrations-Krise — `future_urgency` erreichte 1.0 bei t=39, bevor Hydration bei t=78 den Krisenschwellenwert unterschritt. Dies ist nicht reaktive Homöostase; es ist temporale Projektion, die Motivation antreibt.
+Ein Vergleichsexperiment mit 10 verschiedenen Seeds (200 Schritte, `policy_len=2`) maß Krisenschritte (Zeitschritte mit Energie oder Hydration < 0.25) für einen reaktiven Agenten (`use_temporal_self=False`) versus einen antizipatorischen Agenten (`use_temporal_self=True`):
+
+| Ergebnis | Häufigkeit | Beispiel |
+|---|---|---|
+| Antizipatorisch besser | 1/10 | Seed=55: −32 Krisenschritte (R=54, A=22) |
+| Kein messbarer Unterschied | 8/10 | — |
+| Antizipatorisch schlechter | 1/10 | Seed=17: +24 Krisenschritte (R=24, A=48) |
+
+**Erfolgsfall (Seed=55)**: Das ESN-Urgency-Signal steigt ab t=100 an, während Hydration linear abfällt. Der antizipatorische Agent führt zwischen t=120–160 zwei zusätzliche Konsumierungen durch, bevor seine erste Krise eintritt — 32 Schritte später als beim reaktiven Agenten, der im selben Zeitraum kein Wasser fand.
+
+**Misserfolgsfall (Seed=17) — Paralyse durch Antizipation**: Die detaillierte Trajektorienanalyse enthüllte: der antizipatorische Agent navigierte zur Position (8,0) — einer Gitter-Ecke — und blieb dort 12+ aufeinanderfolgende Schritte mit der Aktion `"down"` gegen eine Wand. Der Mechanismus: nach dem Wassertrinken bei (4,0) zu t=15 ordnete das autobiografische Gedächtnis dem südwestlichen Bereich hohe positive Valenz zu. Der D-Prior zog den Agenten in diese Ecke. Einmal dort, evaluierte der EFE für "bleib hier" günstig (die D-Prior-Zustandsverteilung war erfüllt) — trotz null Ressourcenverfügbarkeit. Der reaktive Agent ohne diesen räumlichen Prior blieb in der ressourcenreichen zentralen Region und konsumierte zweimal im gleichen Zeitraum.
+
+Dieser Fall illustriert eine bekannte Spannung in der antizipatorischen Planung: gedächtnisausbeutende Agenten können schlechter sein als gedächtnislose Erkunder, wenn das Gedächtnis suboptimale Attraktoren codiert. Die Pathologie ist strukturell analog zur klinischen Angst: projizierte Zukunftsbedrohung erzeugt navigatorische Fixierung auf einen "bekannten sicheren" Ort — auf Kosten gegenwärtiger Gelegenheiten.
+
+**Panik-Override**: Ein Krisen-Interrupt wurde implementiert: befindet sich der Agent in einer tatsächlichen Gegenwartskrise (`Energie < 0.25` oder `Hydration < 0.25`) und steht auf der benötigten Ressource, konsumiert er sofort ohne EFE-Berechnung. Dies implementiert Northoffs Anspruch: Gegenwart schlägt Zukunftsprojektion bei existentieller Dringlichkeit. Der Override reagiert auf den IST-Zustand, nicht auf projizierte Dringlichkeit — ein Agent, der eine Krise *projiziert*, überschreibt nicht; ein Agent, der *bereits in einer Krise ist*, schon.
+
+Das Gesamtergebnis ist konsistent mit der theoretischen Erwartung: temporale Selbstmodellierung ist kein universeller Verhaltensvorteil, sondern eine kontextabhängige Strategie.
 
 ### 4.2 ESN vs. Lineare Projektion
 

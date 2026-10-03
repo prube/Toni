@@ -92,11 +92,14 @@ Four components of the generative model are dynamically constructed at each step
 
 **A-matrix** (perception): Northoff precision modulates sharpness. High precision → concentrated likelihood → exploitation. Low precision → diffuse likelihood → exploration.
 
-**C-vector** (preferences): constructed from dominant need (Solms), future urgency (temporal self), social competition factor, and affordance boost (enactivist):
+**C-vector** (preferences): constructed from dominant need (Solms), future urgency (temporal self), social competition factor, and affordance boost (enactivist). Urgency is multiplicative — it scales the base preference rather than adding to it:
 
 ```python
-C[WATER] = 3.0 + urgency*1.5 + afford_water*2.5
+urgency_scale = 1.0 + future_urgency[need] * 1.5  # 1.0 at urg=0, 2.5 at urg=1
+C[WATER] = 3.0 * urgency_scale * seeking_gain + afford_water*2.5
 ```
+
+A secondary mechanism attenuates the D-prior at high urgency: when `future_urgency > 0.3`, `memory_priors` are scaled down (`damping = 1.0 - urgency * 0.8`, min 0.2`). The rationale is Northoff's: at high projected urgency, the system should broaden its search rather than exploit its memory of a single known resource location.
 
 **D-vector** (priors): autobiographical memory adds weight to locations with positive valence history; social observations add weight to locations where others found resources.
 
@@ -171,9 +174,23 @@ In the depression experiment, the LLM reflexions of the depressed agent show not
 
 ### 4.1 Anticipatory Motivation
 
-In a 200-step headless simulation (seed 42), the temporal self generated a 39-step advance warning before the hydration crisis — `future_urgency` reaching 1.0 at t=39 before hydration crossed the crisis threshold at t=78. This is not reactive homeostasis; it is temporal projection driving motivation.
+A 10-seed comparison experiment (200 steps, `policy_len=2`) measured crisis steps (timesteps where energy or hydration < 0.25) for a reactive agent (`use_temporal_self=False`) versus an anticipatory agent (`use_temporal_self=True`):
 
-A comparison experiment (reactive agent with `use_temporal_self=False` vs. anticipatory agent) showed correct urgency divergence but no measurable behavioral difference in navigation outcomes. The limiting factor is `policy_len=2`: pymdp plans only two steps ahead, which is insufficient to route toward water resources 4+ steps away. The anticipatory motivation is present; the planning horizon is too short to translate it into measurably different trajectories. Increasing `policy_len` to 4–5 would be expected to produce divergent outcomes.
+| Result | Count | Example |
+|---|---|---|
+| Anticipatory better | 1/10 | seed=55: −32 crisis steps (R=54, A=22) |
+| No measurable difference | 8/10 | — |
+| Anticipatory worse | 1/10 | seed=17: +24 crisis steps (R=24, A=48) |
+
+**Success case (seed=55)**: The ESN urgency signal rises from t=100 onward as hydration declines linearly. The anticipatory agent makes two additional consumption events at t=120–160 before its first crisis, deferring the first crisis by 32 steps relative to the reactive agent who failed to find water in the same period.
+
+**Failure case (seed=17) — Paralysis through Anticipation**: Detailed trace analysis revealed that the anticipatory agent navigated to position (8,0) — a grid corner — and remained there for 12+ consecutive steps emitting the action `"down"` against a wall. The mechanism: after consuming water at (4,0) at t=15, the autobiographical memory assigned high positive valence to the southwest region. The D-prior pulled the agent toward that corner. Once there, the EFE for "stay" evaluated favorably (the D-prior state distribution was satisfied) despite zero resource availability. The reactive agent, lacking this spatial prior, remained near the resource-rich central region and consumed twice during the same interval.
+
+This case illustrates a known tension in anticipatory planning: memory-exploiting agents can be worse than memoryless explorers when the memory encodes suboptimal attractors. The pathology is structurally analogous to clinical anxiety: projected future threat causes navigational fixation on a "known safe" location at the expense of present-moment opportunity.
+
+**Panik-Override**: A crisis interrupt was implemented to address the most acute version of this failure: if the agent is in actual present crisis (`energy < 0.25` or `hydration < 0.25`) and is standing on the needed resource, it consumes immediately without EFE computation. This implements Northoff's claim that the present moment overrides temporal projection at existential urgency. The override responds to IS-state, not to projected urgency — an agent that *projects* a crisis does not override; an agent that *is already in* crisis does.
+
+The overall result is consistent with the theoretical expectation: temporal self-modeling is not a universal behavioral advantage, but a context-dependent strategy. Its value depends on the reliability of the projection (ESN quality), the relevance of the memory (whether historical water locations remain valid), and the structure of the environment (whether the D-prior's attractor landscape supports navigation or creates corners).
 
 ### 4.2 ESN vs. Linear Projection
 
@@ -243,7 +260,9 @@ The practical consequence is that the LLM's phenomenological outputs are *about*
 
 ### 5.4 Limitations
 
-**Planning horizon**: `policy_len=2` limits AIF to two-step lookahead. Anticipatory motivation requires adequate planning depth to manifest as behavioral divergence. A horizon of 4–5 steps would allow routing toward resources that are not immediately adjacent.
+**Planning horizon**: `policy_len=2` limits AIF to two-step lookahead. While anticipatory motivation produced measurable behavioral improvement in some environments (seed=55), deeper planning (`policy_len=3–4`) is expected to amplify this advantage — but at computational cost: `policy_len=3` produces 125 policies per step vs. 25 for `policy_len=2`.
+
+**D-prior attractor pathology**: the autobiographical memory D-prior, when it encodes strongly positive valence for a location, can create navigational fixed-points (see Section 4.1, seed=17). The D-prior dampening mechanism (`damping = 1.0 − urgency×0.8`) partially addresses this but does not eliminate it when urgency is low and the agent is already committed to a trajectory. A fuller solution would require a more sophisticated memory decay mechanism that degrades spatial priors when the associated resource location is no longer confirmed valid.
 
 **Grid scale**: a 9×9 grid with discrete time steps compresses the temporal dynamics that the oscillator and temporal self models were designed for. The theoretical frameworks were developed for biological systems operating on millisecond-to-day time scales.
 
