@@ -109,10 +109,10 @@ def anticipation_lead(agent_anti: Toni, steps: int) -> list[int]:
 
 
 def run_agent(label: str, env_seed: int, steps: int, use_ts: bool,
-              verbose: bool = False) -> Toni:
+              verbose: bool = False, policy_len: int = 2) -> Toni:
     env = GridWorld(seed=env_seed)
     np.random.seed(env_seed)
-    agent = Toni(env, use_temporal_self=use_ts)
+    agent = Toni(env, use_temporal_self=use_ts, policy_len=policy_len)
 
     if verbose:
         tag = f"{C}[{label}]{RESET}"
@@ -260,11 +260,13 @@ def main() -> None:
                         help="Zufalls-Seed (default: 42)")
     parser.add_argument("--verbose", action="store_true",
                         help="Fortschritt anzeigen")
+    parser.add_argument("--policy-len", type=int, default=2,
+                        help="AIF Planungshorizont in Schritten (default: 2, empfohlen: 4-5)")
     args = parser.parse_args()
 
     print(f"\n{BOLD}{C}{'═'*70}{RESET}")
     print(f"{BOLD}  NORTHOFF TEMPORAL SELF — Vergleichsexperiment{RESET}")
-    print(f"  Seed={args.seed}  Schritte={args.steps}")
+    print(f"  Seed={args.seed}  Schritte={args.steps}  policy_len={args.policy_len}")
     print(f"{BOLD}{C}{'═'*70}{RESET}")
     print(f"\n  {DIM}Zwei identische Agenten (gleicher Seed, gleiche Welt){RESET}")
     print(f"  {R}Reaktiv:{RESET}         future_urgency=None  → nur Istzustand")
@@ -272,12 +274,14 @@ def main() -> None:
 
     t0 = time.time()
     print(f"  Simuliere {R}Reaktiv{RESET}...", end="", flush=True)
-    agent_reaktiv = run_agent("R", args.seed, args.steps, use_ts=False, verbose=False)
+    agent_reaktiv = run_agent("R", args.seed, args.steps, use_ts=False,
+                              verbose=False, policy_len=args.policy_len)
     print(f" {DIM}({time.time()-t0:.1f}s){RESET}")
 
     t1 = time.time()
     print(f"  Simuliere {G}Antizipatorisch{RESET}...", end="", flush=True)
-    agent_anti = run_agent("A", args.seed, args.steps, use_ts=True, verbose=False)
+    agent_anti = run_agent("A", args.seed, args.steps, use_ts=True,
+                           verbose=False, policy_len=args.policy_len)
     print(f" {DIM}({time.time()-t1:.1f}s){RESET}")
 
     print_comparison(agent_reaktiv, agent_anti, args.steps)
