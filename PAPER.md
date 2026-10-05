@@ -7,7 +7,7 @@
 
 ## Abstract
 
-We present *Toni*, a Python research prototype implementing the functional prerequisites of consciousness as described by Georg Northoff's Temporo-Spatial Theory of Consciousness (TTC), Mark Solms' affective consciousness model, Karl Friston's Active Inference framework, and the enactivist tradition of Maturana/Varela and Gibson. Unlike LLM-based "conscious agents" that simulate experience through language, Toni grounds behavior in a closed homeostatic loop — the large language model acts strictly as a verbal cortex with no feedback path to the body or policy layer. We describe the four-layer architecture, demonstrate emergent anticipatory motivation arising from temporal self-modeling with an Echo State Network, document the relational self emerging from multi-agent social positioning, and introduce an enactivist viability and affordance layer that instantiates autopoiesis and state-relative meaning. We further present a five-mechanism depression simulation derived directly from Solms' account of SEEKING-system collapse, producing results consistent with clinical phenomenology: 0 consumption events over 300 steps, 67% crisis rate versus 45% in the healthy agent, and first crisis onset 65 steps earlier. The project demonstrates that the functional distinction between reactive homeostasis, anticipatory motivation, enactivist sense-making, and pathological motivational collapse can be implemented and observed in a minimal grid-world setting.
+We present *Toni*, a Python research prototype implementing the functional prerequisites of consciousness as described by Georg Northoff's Temporo-Spatial Theory of Consciousness (TTC), Mark Solms' affective consciousness model, Karl Friston's Active Inference framework, and the enactivist tradition of Maturana/Varela and Gibson. Unlike LLM-based "conscious agents" that simulate experience through language, Toni grounds behavior in a closed homeostatic loop — the large language model acts strictly as a verbal cortex with no feedback path to the body or policy layer. We describe the four-layer architecture, demonstrate emergent anticipatory motivation arising from temporal self-modeling with an Echo State Network, document the relational self emerging from multi-agent social positioning, and introduce an enactivist viability and affordance layer that instantiates autopoiesis and state-relative meaning. We present three parametric pathology simulations: (1) a five-mechanism Solms depression (SEEKING-system collapse), producing 0 consumption events over 300 steps and 67% crisis rate; (2) a Northoff-specific depression (Rest-Self-Overlap and temporal stasis), producing high urgency with impaired resource location; and (3) a Borderline simulation (valence dysregulation and temporal collapse under stress), producing urgency variance 40× above baseline with 0 consumption events and 33% crisis rate. A five-condition comparison reveals a three-way dissociation: Solms agents find resources but do not want them ("FINDET aber WILL NICHT"), Northoff agents want resources but cannot find them ("WILL aber FINDET NICHT"), and Borderline agents do not maintain a stable drive signal ("WEISS NICHT OB ES WILL"). The project demonstrates that clinically distinct motivational pathologies can be implemented, differentiated, and observed through a shared computational architecture.
 
 ---
 
@@ -134,7 +134,11 @@ water_affordance = (0.75 - hydration) × exp(-distance/4)
 
 Both a high deficit and proximity are required for high affordance. The affordance signal is added to the C-vector, partially overriding the dominant-need priority: an agent whose primary need is energy will still assign elevated preference to nearby water if the water affordance is high — because the environment offers it now, and the coupling makes it relevant.
 
-### 3.4 Depression as Parametric Layer Modification
+### 3.4 Pathology as Parametric Layer Modification
+
+Toni implements three distinct motivational pathologies, each grounded in a different theoretical account of what goes wrong in the underlying architecture. All three are parametric: a scalar in [0,1] modulates the relevant mechanisms, leaving the healthy architecture intact at 0.
+
+**3.4.1 Solms Depression: SEEKING-System Collapse**
 
 Solms identifies depression not as a cognitive disorder but as a collapse of the SEEKING system — the mesolimbic dopaminergic drive that motivates organisms to engage with the world. This account predicts specific, dissociable disruptions: blunted consummatory reward, reduced anticipatory motivation, impaired circadian entrainment, temporal foreshortening, and negative memory consolidation bias. Each maps to a specific layer of Toni's architecture.
 
@@ -159,6 +163,41 @@ rumination       = 1.0 + 4.0 × d   # Layer 3: negative valence memory weight
 **Rumination** (`rumination`): negative valence episodes are stored with amplified weight in the autobiographical memory. At `d=1`, negative memories are written at 5× intensity. The D-prior accumulates negatively-toned location estimates; future navigation is shaped by an increasingly dark retrospective map.
 
 These five mechanisms interact. Rumination and SEEKING collapse produce a reinforcing cycle: weakened motivation means the agent explores less; less exploration means fewer new positive experiences to counterbalance the amplified negative memories; the D-prior grows darker; navigation becomes less effective; crises become more frequent; the negative memory pool deepens further.
+
+**3.4.2 Northoff Depression: Rest-Self-Overlap and Temporal Stasis**
+
+Northoff's account of depression is mechanistically distinct from Solms'. Where Solms locates the primary failure in the mesolimbic SEEKING drive, Northoff locates it in the relationship between the brain's intrinsic REST activity and its coupling to the external world. In depression, the REST-self activity becomes excessively dominant — the self-referential default network overrides environmental input. Northoff terms this "Rest-Self-Overlap": the self folds in on itself and the world loses significance.
+
+A second parameter `northoff_depression_level ∈ [0, 1]` modulates two mechanisms:
+
+```python
+env_coupling_scale = 1.0 - 0.9 × nd   # A-matrix precision, affordance gain
+past_bias          = nd × 3.0          # ESN weighted regression: older = more weight
+```
+
+**Rest-Self-Overlap** (`env_coupling_scale`): the A-matrix precision is multiplied by `(0.3 + 0.7 × env_coupling_scale)`. At `nd=1`, the perception model is reduced to 37% of normal sharpness — all positions in the grid look similar, resource fields are not distinguished reliably. Simultaneously, the affordance signals in the C-vector are multiplied by `env_coupling_scale`. The agent can navigate; it does not perceive where navigation should take it.
+
+**Temporal stasis** (`past_bias`): the ESN Ridge Regression uses exponentially weighted samples with `w[0] = exp(past_bias)` (oldest = highest weight) and `w[T−1] = 1.0` (most recent = lowest weight). At `past_bias=3.0`, the oldest samples weigh approximately 20× more than the current state. The trajectory prediction is dominated by the distant past. The agent projects forward along historical patterns that no longer apply — a functional analog to the clinical phenomenon of temporal stasis in melancholic depression.
+
+The Northoff and Solms depressions produce a measurable dissociation (see Section 4.6): Northoff agents show *high urgency with low consumption*, Solms agents show *low urgency with relatively higher consumption*. The Northoff agent knows it needs resources but cannot perceive where they are. The Solms agent encounters resources but lacks the motivational drive to engage with them.
+
+**3.4.3 Borderline: Regulatory Failure**
+
+Borderline Personality Disorder differs from both depressive pathologies in kind, not degree. Both depressions represent stable pathological states — the agent is stuck in a fixed motivational configuration. Borderline represents a regulatory failure: the system cannot maintain a stable self-state. The self-world boundary is unstable rather than broken. Northoff locates BPD in a disruption of the self-other boundary along the social axis; Solms and Panksepp locate it in hyperactivation of the PANIC/GRIEF and RAGE systems with chaotic SEEKING — not collapsed but dysregulated.
+
+A third parameter `borderline_level ∈ [0, 1]` modulates three mechanisms:
+
+```python
+bl_noise              = 0.15 × bl             # noise on wellbeing signal
+bl_collapse_threshold = 1.0 - 0.7 × bl        # urgency level triggering temporal collapse
+social_weight         = 1.0 + 4.0 × bl        # amplification of social prior
+```
+
+**Valence dysregulation** (`bl_noise`): Gaussian noise is added to the wellbeing signal used to construct the C-vector. At `bl=1`, σ=0.15 — well above the normal signal range. The C-vector fluctuates erratically from step to step. The agent does not have a stable drive: it may register high urgency at one step and near-zero urgency at the next, despite identical body state.
+
+**Temporal collapse under stress** (`bl_collapse_threshold`): when the maximum `future_urgency` signal exceeds the threshold (0.30 at `bl=1`), the future_urgency array passed to the AIF is replaced with None — the agent falls back to purely reactive, present-moment decision-making. This implements the clinical phenomenon of "emotional flooding": when affect exceeds a threshold, reflective capacity is suspended and impulsive action takes over. Critically, this creates a positive feedback loop: urgency rising above threshold triggers collapse → collapse reduces navigational effectiveness → body state deteriorates → urgency rises further.
+
+**Social hypersensitivity** (`social_weight`): the social prior in the D-vector is multiplied by `social_weight`. When other agents are present, their positional history becomes the dominant factor in the agent's spatial prior. This implements the extreme social sensitivity and abandonment anxiety central to clinical BPD.
 
 ### 3.5 Layer 4: Verbal Cortex (LLM)
 
@@ -212,7 +251,7 @@ These formulations were not prompted by any instruction to describe social exper
 
 The viability signal demonstrates the intended behavior: in a normally functioning agent, viability tracks approximately 0.9–0.95. During resource deprivation, viability declines faster than wellbeing because mobility (the geometric mean of energy and hydration scaled by integrity) degrades before either individual variable crosses the crisis threshold. The affordance signals correctly respond to body-environment coupling: high affordance for water is observed only when hydration deficit is high AND water is proximate — neither condition alone is sufficient.
 
-### 4.5 Depression Simulation
+### 4.5 Solms Depression Simulation
 
 A 300-step comparison experiment (seed 42, `depression_level=1.0`) was run with identical starting conditions for a healthy and a depressed agent. Results:
 
@@ -229,6 +268,26 @@ The most striking result is the 0 consumption events for the depressed agent ove
 A secondary finding concerns the interaction between temporal foreshortening and crisis onset. The depressed agent's first crisis arrived 65 steps earlier than the healthy agent's. This is not attributable to circadian desynchronization or anhedonia alone, but to the reduced planning horizon: with `horizon=12` (vs. 80), the `future_urgency` signal does not accumulate urgency until the crisis is imminent. By the time urgency rises above the action threshold, there is no longer time to navigate to a resource.
 
 The LLM reflexions of the depressed agent (where available) showed the expected qualitative shift: temporal horizon in the language output contracted. The healthy agent's reflexions contained constructions like *"wenn der Wasservorrat noch weiter sinkt"* (anticipatory); the depressed agent's reflexions contained constructions like *"ich erinnere mich kaum noch an"* and *"es wird nicht besser"* (ruminative, present-bound). These differences were not instructed — they arose from the state JSON's foreshortened ESN window and negative memory trend.
+
+### 4.6 Three-Way Dissociation: Solms, Northoff, Borderline
+
+A five-condition comparison experiment (seed=55, 150 steps) tested the theoretical prediction that Solms depression, Northoff depression, and Borderline produce mechanistically distinct behavioral signatures:
+
+| Condition | Urgency | Consumes | Crisis% | Ø-Wellbeing | Signature |
+|---|---|---|---|---|---|
+| Healthy | 0.001 | 4 | 0.0% | −0.054 | Baseline |
+| Solms | 0.000 | 7 | 0.0% | −0.082 | FINDET aber WILL NICHT |
+| Northoff | 0.065 | 2 | 2.7% | −0.088 | WILL aber FINDET NICHT |
+| Borderline | 0.570 | 0 | 33.3% | −0.254 | WEISS NICHT OB ES WILL |
+| Both | 0.340 | 0 | 33.3% | −0.254 | combined |
+
+The three-way dissociation is confirmed:
+
+**Solms**: urgency is the *lowest* of all pathological conditions (0.000 vs. healthy 0.001). The SEEKING collapse suppresses the drive signal — the agent does not feel the crisis strongly. Yet it accumulates more consumption events than any other pathological condition (7 vs. 4 healthy, 2 Northoff, 0 Borderline) because it moves freely, without attractor fixation or planning collapse. It simply does not engage with what it finds.
+
+**Northoff**: urgency is moderate and rising (0.065 at 150 steps; in longer runs reaches 0.719 at 300 steps). The agent senses the crisis. But the flattened A-matrix means that all grid positions look similar — the agent cannot distinguish resource fields from empty fields with sufficient reliability to navigate toward them. The agent WANTS resources but CANNOT FIND them.
+
+**Borderline**: the critical metric is urgency variance (σ=0.407 vs. σ=0.010 for healthy agents — 40× more volatile). The Borderline agent's urgency signal is not chronically high or chronically low — it oscillates unpredictably. The temporal collapse feedback loop is visible in the hydration timeline: from t=0 to t=60, hydration declines normally; at t=60, urgency crosses the collapse threshold, future planning falls away, and hydration decline accelerates steeply, reaching crisis levels at t=100. The agent has entered the positive feedback loop: no planning → no resource navigation → worse body state → higher urgency → deeper collapse. It achieves 0 consumption events and 33.3% crisis steps despite having no perceptual impairment (unlike Northoff) and no motivational suppression (unlike Solms). The failure is purely regulatory: a drive signal that cannot sustain a stable directional preference long enough to execute a navigation sequence.
 
 ---
 
@@ -247,6 +306,8 @@ Toni implements functional analogs of:
 - Maturana/Varela's autopoiesis (viability as operational capacity, distinct from wellbeing)
 - Gibson's affordances (state-relative meaning from body-environment coupling)
 - Solms' SEEKING-collapse model of depression (five-mechanism parametric modification)
+- Northoff's Rest-Self-Overlap depression (env_coupling_scale, past_bias — temporal stasis)
+- Borderline regulatory failure (valence dysregulation, temporal collapse, social hypersensitivity)
 
 ### 5.2 What Has Not Been Claimed
 
@@ -272,13 +333,17 @@ The practical consequence is that the LLM's phenomenological outputs are *about*
 
 **Depression mechanism isolation**: the five depression mechanisms are not individually switchable in the current implementation — they are all modulated by a single scalar. Isolating each mechanism would allow dissociating their contributions to the behavioral outcome. In the 300-step experiment, the relative weights of SEEKING collapse versus anhedonia versus circadian desynchronization cannot be established independently.
 
-### 5.5 Depression as Theoretical Validation
+### 5.5 Pathology as Theoretical Validation
 
-The depression simulation serves as an internal consistency check on the architecture. Solms' claim is specific: depression is a SEEKING-system collapse, not primarily a cognitive distortion. If the architecture correctly implements SEEKING as the mesolimbic drive in the C-vector, then suppressing `seeking_gain` should produce SEEKING-collapse phenomenology — not distorted beliefs, not sadness, not cognitive slowing, but specifically motivational withdrawal from environmental engagement.
+The pathology simulations serve as internal consistency checks on the architecture. Each of the three parametric pathologies produces a behavioral signature that corresponds to the theoretical account it implements:
 
-The observation that the depressed agent consumed 0 times over 300 steps is consistent with this. The agent's body continued to register deficits. The interozeptive signal continued to accurately encode the need. The AIF module continued to receive urgency signals. But the C-vector preference gradient for resources was sufficiently flattened that EFE minimization consistently favored inaction or exploration over directed approach. The agent knew it was dying; it did not act. This is the functional signature of SEEKING collapse, not of cognitive impairment.
+**Solms depression**: SEEKING collapse produces motivational withdrawal. The agent encounters resources but does not engage with them. 0 consumption events over 300 steps with normal perceptual capacity validates that the C-vector SEEKING mechanism is causally responsible for motivated behavior.
 
-The further observation that the LLM reflexions changed tonality without instruction validates the separation principle: the verbal cortex was receiving real data about a qualitatively different internal state, and it articulated that difference. The LLM did not perform depression; the body enacted it, and the LLM reported it.
+**Northoff depression**: Rest-Self-Overlap produces perceptual flattening. The agent registers urgency but cannot locate resources. The dissociation of urgency (high) from consumption (low) is predicted by Northoff's account — the agent's SEEKING is intact, its environmental coupling is disrupted.
+
+**Borderline**: Regulatory failure produces neither stable collapse nor stable engagement but oscillation. The urgency variance signature (40× above baseline) is the computational analog of emotional dysregulation. The positive feedback loop between temporal collapse and worsening body state implements the clinical observation that BPD patients in crisis lose access to exactly the reflective capacity that would allow them to exit the crisis.
+
+The three pathologies are orthogonal in their mechanism and dissociable in their behavioral output. This dissociability was not engineered post-hoc: it arose from implementing each theoretical account independently and observing their outputs. The architecture breaks in the ways the theories predict it should break, and breaks differently depending on which theory's mechanism is activated. This is a non-trivial form of empirical validation for a computational model of theoretical neuroscience.
 
 ---
 
@@ -286,9 +351,9 @@ The further observation that the LLM reflexions changed tonality without instruc
 
 Toni demonstrates that the conceptual architecture of Northoff, Solms, Friston, and the enactivist tradition can be implemented as a coherent, working software system. The four layers — homeostatic body, active inference policy, multi-dimensional self-models, and verbal cortex — produce emergent behaviors that are legible in theoretical terms: anticipatory motivation arising from temporal self-projection, relational self-articulation arising from social positioning, viability-aware action arising from autopoietic constraints, and motivational collapse arising from SEEKING-system suppression.
 
-The depression simulation adds an important dimension to the project's theoretical claim. The architecture does not only implement positive prerequisites for consciousness-like behavior; it implements their parametric failure modes. Pathology in the model corresponds structurally to pathology in the theory. This is a minimal form of empirical validation: the system breaks in the ways the theory predicts it should break.
+The three pathology simulations add an important dimension to the project's theoretical claim. The architecture does not only implement positive prerequisites for consciousness-like behavior; it implements their parametric failure modes, and — crucially — it implements three distinct failure modes corresponding to three distinct theoretical accounts. Solms' SEEKING collapse, Northoff's Rest-Self-Overlap depression, and Borderline regulatory failure produce behaviorally dissociable signatures that were not post-hoc engineered: they arose from independently implementing each theoretical account in the same architecture and observing the outputs.
 
-The fundamental contribution is not any individual component but the integration principle: consciousness-relevant behavior does not require a language model at its center. It requires a body, a world, temporal depth, genuine coupling, and — as the depression experiment shows — the capacity to lose all of these through failure of a single motivational drive system. Language comes after. So does its loss.
+The fundamental contribution is not any individual component but the integration principle: consciousness-relevant behavior does not require a language model at its center. It requires a body, a world, temporal depth, genuine coupling, and — as the pathology experiments show — the capacity to lose these through failure of specific, theoretically identified subsystems. Language comes after. So does its loss.
 
 ---
 

@@ -7,7 +7,7 @@
 
 ## Zusammenfassung
 
-Wir präsentieren *Toni*, einen Python-Forschungsprototypen, der die funktionalen Voraussetzungen von Bewusstsein implementiert — wie sie von Georg Northoffs Temporo-Spatial Theory of Consciousness (TTC), Mark Solms' Modell des affektiven Bewusstseins, Karl Fristons Active Inference und der enaktivistischen Tradition nach Maturana/Varela und Gibson beschrieben werden. Anders als LLM-basierte "bewusste Agenten", die Erleben durch Sprache simulieren, verankert Toni sein Verhalten in einem geschlossenen homöostatischen Regelkreis — das große Sprachmodell fungiert ausschließlich als verbaler Kortex ohne Rückkopplungspfad zu Körper oder Policy-Schicht. Wir beschreiben die vierschichtige Architektur, dokumentieren antizipatorische Motivation aus einem Echo State Network, zeigen das soziale Selbst aus Zwei-Agenten-Positionierung, führen eine enaktivistische Viabilitäts- und Affordanz-Schicht ein sowie eine Fünf-Mechanismen-Depressionssimulation basierend auf Solms' SEEKING-Kollaps-Modell. Ein Vergleichsexperiment enthüllt einen unerwarteten Befund: unter bestimmten Bedingungen blockiert übermäßige Antizipation die reaktive Handlung — eine *Paralyse durch Antizipation*, die eine direkte theoretische Entsprechung in der klinischen Literatur hat.
+Wir präsentieren *Toni*, einen Python-Forschungsprototypen, der die funktionalen Voraussetzungen von Bewusstsein implementiert — wie sie von Georg Northoffs Temporo-Spatial Theory of Consciousness (TTC), Mark Solms' Modell des affektiven Bewusstseins, Karl Fristons Active Inference und der enaktivistischen Tradition nach Maturana/Varela und Gibson beschrieben werden. Anders als LLM-basierte "bewusste Agenten", die Erleben durch Sprache simulieren, verankert Toni sein Verhalten in einem geschlossenen homöostatischen Regelkreis — das große Sprachmodell fungiert ausschließlich als verbaler Kortex ohne Rückkopplungspfad zu Körper oder Policy-Schicht. Wir beschreiben die vierschichtige Architektur, dokumentieren antizipatorische Motivation aus einem Echo State Network, zeigen das soziale Selbst aus Zwei-Agenten-Positionierung und führen drei parametrische Pathologie-Simulationen ein: (1) Solms-Depression (SEEKING-Kollaps, 0 Konsum-Ereignisse, 67% Krisenrate); (2) Northoff-Depression (Rest-Self-Overlap und temporale Stasis, hohe Urgency bei minimaler Ressourcenfindung); (3) Borderline (Valenz-Dysregulation und temporaler Kollaps unter Stress, Urgency-Varianz 40× über Baseline). Ein Fünf-Bedingungen-Vergleich zeigt eine Drei-Wege-Dissoziation: Solms-Agenten finden Ressourcen, wollen sie aber nicht ("FINDET aber WILL NICHT"), Northoff-Agenten wollen Ressourcen, finden sie aber nicht ("WILL aber FINDET NICHT"), Borderline-Agenten können kein stabiles Antriebssignal aufrechterhalten ("WEISS NICHT OB ES WILL"). Das Projekt demonstriert, dass klinisch unterschiedliche Motivationspathologien in einer gemeinsamen Architektur implementiert, differenziert und beobachtet werden können.
 
 ---
 
@@ -132,11 +132,13 @@ wasser_affordanz = (0.75 - hydration) × exp(-distanz/4)
 
 Sowohl ein hohes Defizit als auch Nähe sind für hohe Affordanz erforderlich.
 
-### 3.4 Depression als parametrische Schichtmodifikation
+### 3.4 Pathologie als parametrische Schichtmodifikation
 
-Solms identifiziert Depression nicht als kognitive Störung, sondern als Kollaps des SEEKING-Systems — des mesolimbischen dopaminergen Antriebs, der Organismen motiviert, aktiv mit der Welt in Kontakt zu treten. Dieses Modell sagt spezifische, dissoziierbare Störungen vorher: gedämpfte konsumatorische Belohnung, reduzierte antizipatorische Motivation, beeinträchtigte zirkadiane Synchronisation, temporale Verkürzung und negativer Gedächtniskonsolidierungsbias.
+Toni implementiert drei unterschiedliche Motivationspathologien, jede verankert in einem anderen theoretischen Konto dessen, was in der zugrundeliegenden Architektur schiefläuft. Alle drei sind parametrisch: ein Skalar in [0,1] moduliert die relevanten Mechanismen und lässt die gesunde Architektur bei 0 intakt.
 
-Ein einziger Parameter `depression_level ∈ [0, 1]` moduliert fünf Mechanismen gleichzeitig:
+**3.4.1 Solms-Depression: SEEKING-System-Kollaps**
+
+Solms identifiziert Depression nicht als kognitive Störung, sondern als Kollaps des SEEKING-Systems — des mesolimbischen dopaminergen Antriebs, der Organismen motiviert, aktiv mit der Welt in Kontakt zu treten. Ein einziger Parameter `depression_level ∈ [0, 1]` moduliert fünf Mechanismen gleichzeitig:
 
 ```python
 anhedonia_factor = 1.0 - 0.8 × d   # Schicht 1: Konsum-Gain
@@ -155,6 +157,39 @@ rumination       = 1.0 + 4.0 × d   # Schicht 3: Neg. Valenz-Gedächtnisgewicht
 **Zirkadiane Desynchronisation** unterdrückt die Kuramoto-Kopplung an den Tagesrhythmus. Die internen Rhythmen driften frei. Präzision bleibt über den Tag hinweg nahe 1.0, anstatt in der aktiven Phase zu spitzen. Klinisch entspricht dies dem flachen Cortisol-Profil und der gestörten Schlafarchitektur, die bei schwerer Depression konsistent gemessen werden.
 
 **Rumination** speichert negative Valenz-Episoden mit amplifizierten Gewichten im autobiografischen Gedächtnis. Bei `d=1` werden negative Erinnerungen mit 5-facher Intensität geschrieben. Die Gedächtniskarte akkumuliert negativ getönte Ortsschätzungen; künftige Navigation wird durch eine zunehmend dunkle retrospektive Karte geprägt.
+
+**3.4.2 Northoff-Depression: Rest-Self-Overlap und temporale Stasis**
+
+Northoffs Depressionskonto unterscheidet sich mechanistisch von Solms'. Während Solms den primären Fehler im mesolimbischen SEEKING-Antrieb lokalisiert, lokalisiert Northoff ihn in der Beziehung zwischen der intrinsischen REST-Aktivität des Gehirns und ihrer Kopplung mit der Außenwelt. Bei Depression wird die REST-Selbst-Aktivität übermäßig dominant — das selbstreferenzielle Defaultnetzwerk überwältigt Umwelteingaben: "Rest-Self-Overlap".
+
+Ein zweiter Parameter `northoff_depression_level ∈ [0, 1]` moduliert zwei Mechanismen:
+
+```python
+env_coupling_scale = 1.0 - 0.9 × nd   # A-Matrix-Präzision, Affordanz-Gain
+past_bias          = nd × 3.0          # ESN-Gewichtung: älter = mehr Gewicht
+```
+
+**Rest-Self-Overlap** (`env_coupling_scale`): die A-Matrix-Präzision wird auf `(0.3 + 0.7 × env_coupling_scale)` multipliziert. Bei `nd=1` ist das Wahrnehmungsmodell auf 37% normaler Schärfe reduziert — alle Grid-Positionen sehen ähnlich aus, Ressourcenfelder werden nicht zuverlässig unterschieden. Der Agent kann navigieren; er nimmt nicht wahr, wohin Navigation ihn führen sollte.
+
+**Temporale Stasis** (`past_bias`): die ESN-Ridge-Regression verwendet exponentiell gewichtete Samples, bei denen ältere Samples dominieren. Bei `past_bias=3.0` wiegen die ältesten Samples etwa 20× mehr als der aktuelle Zustand. Die Trajektorienvorhersage wird von der fernen Vergangenheit dominiert — ein funktionales Analogon zur klinischen temporalen Stasis bei melancholischer Depression.
+
+**3.4.3 Borderline: Regulationsstörung**
+
+Borderline-Persönlichkeitsstörung unterscheidet sich von beiden depressiven Pathologien der Art, nicht dem Grad nach. Beide Depressionen repräsentieren stabile pathologische Zustände. Borderline repräsentiert ein Regulationsversagen: das System kann keinen stabilen Selbstzustand aufrechterhalten. Northoff lokalisiert BPS in einer Störung der Selbst-Andere-Grenze entlang der sozialen Achse; Solms und Panksepp lokalisieren es in Hyperaktivierung der PANIC/GRIEF- und RAGE-Systeme bei chaotischem SEEKING — nicht kollabiert, sondern dysreguliert.
+
+Ein dritter Parameter `borderline_level ∈ [0, 1]` moduliert drei Mechanismen:
+
+```python
+bl_noise              = 0.15 × bl             # Rauschen auf Wohlbefindenssignal
+bl_collapse_threshold = 1.0 - 0.7 × bl        # Urgency-Schwelle für temporalen Kollaps
+social_weight         = 1.0 + 4.0 × bl        # Verstärkung des sozialen Priors
+```
+
+**Valenz-Dysregulation** (`bl_noise`): Gausssches Rauschen wird zum Wohlbefindenssignal addiert, das den C-Vektor konstruiert. Bei `bl=1` beträgt σ=0.15 — weit über dem normalen Signalbereich. Der C-Vektor fluktuiert unberechenbar von Schritt zu Schritt. Der Agent hat kein stabiles Antriebssignal.
+
+**Temporaler Kollaps unter Stress** (`bl_collapse_threshold`): wenn das maximale `future_urgency`-Signal die Schwelle überschreitet (0.30 bei `bl=1`), wird das future_urgency-Array durch None ersetzt — der Agent fällt auf rein reaktive, gegenwartsmomentane Entscheidungsfindung zurück. Dies implementiert "emotionale Überschwemmung": wenn Affekt einen Schwellenwert überschreitet, wird reflektive Kapazität ausgesetzt. Kritisch: dies erzeugt eine positive Rückkopplungsschleife — Urgency überschreitet Schwelle → Kollaps → reduzierte Navigationseffektivität → schlechterer Körperzustand → höhere Urgency → tieferer Kollaps.
+
+**Soziale Hypersensitivität** (`social_weight`): der soziale Prior im D-Vektor wird mit `social_weight` multipliziert. Wenn andere Agenten präsent sind, dominiert ihre Positionshistorie den räumlichen Prior des Agenten — Implementierung der extremen Sozialempfindlichkeit und Verlassenheitsangst, die für klinische BPS zentral sind.
 
 ### 3.5 Schicht 4: Verbaler Kortex (LLM)
 
@@ -208,7 +243,7 @@ Diese Formulierungen wurden durch kein Instruktion zu sozialer Erfahrung erzwung
 
 Das Viabilitätssignal demonstriert das beabsichtigte Verhalten: In einem normal funktionierenden Agenten verfolgt Viabilität etwa 0.9–0.95. Bei Ressourcenentzug sinkt Viabilität schneller als Wohlbefinden, weil Mobilität (das geometrische Mittel von Energie und Hydration skaliert nach Integrität) sich verschlechtert, bevor eine der einzelnen Variablen den Krisenschwellenwert überschreitet.
 
-### 4.5 Depressionssimulation
+### 4.5 Solms-Depressionssimulation
 
 Ein 300-Schritt-Vergleichsexperiment (Seed 42, `depression_level=1.0`) mit identischen Startbedingungen ergab:
 
@@ -221,7 +256,27 @@ Ein 300-Schritt-Vergleichsexperiment (Seed 42, `depression_level=1.0`) mit ident
 
 Das bemerkenswerteste Ergebnis ist die 0 Konsum-Ereignisse des depressiven Agenten über 300 Schritte. Dies geschah nicht wegen Anhedonie — Anhedonie würde beim Trinken aktiv — sondern weil der SEEKING-Kollaps dominant genug war, dass der Agent nie zu einer Ressource navigierte. Anhedonie hatte keine Gelegenheit zu aktivieren. Dies spiegelt die klinische Beobachtung wider, dass schwer depressive Patienten nicht schwache Belohnung durch Nahrung beschreiben, sondern das Unvermögen, aufzustehen und Nahrung zu suchen.
 
-### 4.6 Paralyse durch Antizipation
+### 4.6 Drei-Wege-Dissoziation: Solms, Northoff, Borderline
+
+Ein Fünf-Bedingungen-Vergleichsexperiment (Seed=55, 150 Schritte) testete die theoretische Vorhersage, dass Solms-Depression, Northoff-Depression und Borderline mechanistisch unterschiedliche Verhaltenssignaturen erzeugen:
+
+| Bedingung | Urgency | Konsume | Krisen% | Ø-Wellbeing | Signatur |
+|---|---|---|---|---|---|
+| Gesund | 0.001 | 4 | 0.0% | −0.054 | Baseline |
+| Solms | 0.000 | 7 | 0.0% | −0.082 | FINDET aber WILL NICHT |
+| Northoff | 0.065 | 2 | 2.7% | −0.088 | WILL aber FINDET NICHT |
+| Borderline | 0.570 | 0 | 33.3% | −0.254 | WEISS NICHT OB ES WILL |
+| Beide | 0.340 | 0 | 33.3% | −0.254 | kombiniert |
+
+Die Drei-Wege-Dissoziation ist bestätigt:
+
+**Solms**: Urgency ist die *niedrigste* aller pathologischen Bedingungen (0.000). Der SEEKING-Kollaps unterdrückt das Antriebssignal — der Agent spürt die Krise nicht stark. Dennoch akkumuliert er mehr Konsum-Ereignisse als jede andere pathologische Bedingung (7 vs. 4 gesund, 2 Northoff, 0 Borderline), weil er sich frei bewegt — ohne Attraktor-Fixierung oder Planungskollaps. Er engagiert sich nur nicht mit dem, was er findet.
+
+**Northoff**: Urgency ist moderat und steigt (0.065 bei 150 Schritten; bei längeren Läufen 0.719 bei 300 Schritten). Der Agent registriert die Krise. Aber die flache A-Matrix bedeutet, dass alle Grid-Positionen ähnlich aussehen — der Agent kann Ressourcenfelder nicht zuverlässig von leeren Feldern unterscheiden. Der Agent WILL Ressourcen, FINDET sie aber nicht.
+
+**Borderline**: Die entscheidende Metrik ist die Urgency-Varianz (σ=0.407 vs. σ=0.010 für gesunde Agenten — 40× volatiler). Das Urgency-Signal des Borderline-Agenten ist nicht chronisch hoch oder chronisch niedrig — es oszilliert unvorhersehbar. Die temporale Kollaps-Rückkopplungsschleife ist im Hydrations-Verlauf sichtbar: von t=0 bis t=60 fällt Hydration normal ab; bei t=60 überschreitet Urgency die Kollaps-Schwelle, Zukunftsplanung fällt weg, und der Hydrations-Abfall beschleunigt sich steil, erreicht Krisenniveau bei t=100. Der Agent ist in die positive Rückkopplungsschleife eingetreten: keine Planung → keine Ressourcen-Navigation → schlechterer Körperzustand → höhere Urgency → tieferer Kollaps. Er erreicht 0 Konsum-Ereignisse und 33.3% Krisenschritte — ohne Wahrnehmungsbeeinträchtigung (anders als Northoff) und ohne Motivationsunterdrückung (anders als Solms). Das Versagen ist rein regulatorisch.
+
+### 4.7 Paralyse durch Antizipation
 
 Ein unerwartetes Ergebnis entstand beim Vergleichsexperiment mit `policy_len=3` und Seed 17. Bis t=220 verhielten sich reaktiver und antizipatorischer Agent identisch. Bei t=230 divergierten die Trajektorien:
 
@@ -255,6 +310,8 @@ Toni implementiert funktionale Analoga von:
 - Maturana/Varelas Autopoiese (Viabilität als operationelle Kapazität, getrennt von Wohlbefinden)
 - Gibsons Affordanzen (zustandsrelative Bedeutung aus Körper-Umwelt-Kopplung)
 - Solms' SEEKING-Kollaps-Modell der Depression (fünf-Mechanismus-parametrische Modifikation)
+- Northoffs Rest-Self-Overlap-Depression (env_coupling_scale, past_bias — temporale Stasis)
+- Borderline-Regulationsversagen (Valenz-Dysregulation, temporaler Kollaps, soziale Hypersensitivität)
 
 ### 5.2 Was nicht behauptet wurde
 
@@ -266,11 +323,17 @@ Die wichtigste architektonische Entscheidung ist die Einwegbarriere zwischen dem
 
 Die praktische Konsequenz ist, dass die phänomenologischen Outputs des LLM *über* einen realen Körperzustand handeln, nicht Fabrikationen sind. Der Agent sagt nicht "Ich bin durstig", weil er dazu instruiert wurde; er sagt es, weil das Hydrations-Defizit, die temporale Dringlichkeit und die Wasser-Affordanz-Signale im Kontext-JSON einen genuinen funktionalen Durstszustand konstituieren, den die Sprachschicht artikuliert.
 
-### 5.4 Depression als theoretische Validierung
+### 5.4 Pathologie als theoretische Validierung
 
-Die Depressionssimulation dient als interne Konsistenzprüfung der Architektur. Solms' Behauptung ist spezifisch: Depression ist ein SEEKING-System-Kollaps, keine primär kognitive Verzerrung. Wenn die Architektur SEEKING als mesolimbischen Antrieb im C-Vektor korrekt implementiert, sollte das Unterdrücken von `seeking_gain` SEEKING-Kollaps-Phänomenologie erzeugen — keine verzerrten Überzeugungen, keine Trauer, keine kognitive Verlangsamung, sondern spezifisch motivationalen Rückzug aus dem Umweltkontakt.
+Die Pathologie-Simulationen dienen als interne Konsistenzprüfungen der Architektur. Jede der drei parametrischen Pathologien erzeugt eine Verhaltenssignatur, die dem theoretischen Konto entspricht, das sie implementiert:
 
-Die Beobachtung, dass der depressive Agent 0 Mal über 300 Schritte konsumierte, ist damit konsistent. Der Körper des Agenten registrierte weiterhin Defizite. Das interozeptive Signal kodierte das Bedürfnis weiterhin korrekt. Das AIF-Modul empfing weiterhin Dringlichkeitssignale. Aber der C-Vektor-Präferenzgradient für Ressourcen war ausreichend abgeflacht, dass EFE-Minimierung konsistent Inaktivität oder Exploration gegenüber gezielter Navigation bevorzugte. Der Agent wusste, dass er sterben würde; er handelte nicht. Dies ist die funktionale Signatur des SEEKING-Kollaps.
+**Solms-Depression**: SEEKING-Kollaps erzeugt motivationalen Rückzug. Der Agent begegnet Ressourcen, engagiert sich aber nicht mit ihnen. 0 Konsum-Ereignisse über 300 Schritte bei normaler Wahrnehmungskapazität validiert, dass der C-Vektor-SEEKING-Mechanismus kausal für motiviertes Verhalten verantwortlich ist.
+
+**Northoff-Depression**: Rest-Self-Overlap erzeugt Wahrnehmungsabflachung. Der Agent registriert Urgency, findet aber keine Ressourcen. Die Dissoziation von Urgency (hoch) und Konsum (niedrig) wird von Northoffs Konto vorhergesagt — das SEEKING des Agenten ist intakt, seine Umweltkopplung ist gestört.
+
+**Borderline**: Regulationsversagen erzeugt weder stabilen Kollaps noch stabiles Engagement, sondern Oszillation. Die Urgency-Varianz-Signatur (40× über Baseline) ist das rechnerische Analogon zu emotionaler Dysregulation. Die positive Rückkopplungsschleife zwischen temporalem Kollaps und sich verschlechterndem Körperzustand implementiert die klinische Beobachtung, dass BPS-Patienten in der Krise genau die reflexive Kapazität verlieren, die es ihnen ermöglichen würde, aus der Krise herauszukommen.
+
+Die drei Pathologien sind orthogonal in ihrem Mechanismus und dissoziierbar in ihrer Verhaltensausgabe. Diese Dissoziierbarkeit wurde nicht post-hoc konstruiert: sie entstand daraus, jedes theoretische Konto unabhängig zu implementieren und die Outputs zu beobachten. Das System bricht auf die Art und Weisen, die die Theorien vorhersagen, und bricht unterschiedlich, je nachdem welcher Mechanismus aktiviert wird.
 
 ### 5.5 Das Problem des ausgeglichenen Temporalhorizonts
 

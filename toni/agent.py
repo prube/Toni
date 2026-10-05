@@ -55,6 +55,7 @@ class Toni:
                  agent_id: str = "toni",
                  depression_level: float = 0.0,
                  northoff_depression_level: float = 0.0,
+                 borderline_level: float = 0.0,
                  policy_len: int = 2):
         self.env = env
         self.depression_level = float(np.clip(depression_level, 0.0, 1.0))
@@ -71,6 +72,17 @@ class Toni:
         nd = float(np.clip(northoff_depression_level, 0.0, 1.0))
         self._env_coupling  = 1.0 - 0.9 * nd   # Affordanz-Blindheit (0.1 bei nd=1)
         past_bias_val       = nd * 3.0           # Vergangenheit dominiert ESN (0→3)
+
+        # Borderline-spezifische Mechanismen (Valenz-Dysregulation, temporaler Kollaps)
+        # Regulationsstörung: kein stabiler Setpoint, Selbst-Welt-Grenze instabil.
+        # Drei Mechanismen:
+        #   1. Valenz-Rauschen: Körpersignal schwankt unvorhersehbar → unstabiles C
+        #   2. Temporaler Kollaps: bei Stress bricht Zukunftsplanung zusammen (Impulsivität)
+        #   3. Soziale Hypersensitivität: andere Agenten dominieren den Prior
+        bl = float(np.clip(borderline_level, 0.0, 1.0))
+        self._bl_noise              = 0.15 * bl   # Valenz-Rauschen: 0 normal → 0.15 bei bl=1
+        self._bl_collapse_threshold = 1.0 - 0.7 * bl  # Kollaps ab: 1.0 (nie) → 0.30 (bl=1)
+        self._social_weight         = 1.0 + 4.0 * bl  # Soziales Gewicht: 1× → 5×
 
         self.body = Body(anhedonia_factor=anhedonia)
         self.temporal = TemporalDynamics(k_ext_scale=k_ext_scale)
@@ -267,21 +279,45 @@ class Toni:
                 )
                 if self.social_self.agent_count > 0 else 1.0
             )
+
+            # ── Borderline-Modifikationen ────────────────────────────────
+            # ① Valenz-Rauschen: emotionale Dysregulation
+            #    Der Agent "weiß nicht ob er will" — Körpersignal fluktuiert,
+            #    C-Vektor ist von Schritt zu Schritt instabil.
+            _wellbeing = self.wellbeing
+            if self._bl_noise > 0.0:
+                _wellbeing = float(np.clip(
+                    self.wellbeing + np.random.normal(0.0, self._bl_noise),
+                    -2.0, 1.0
+                ))
+
+            # ② Temporaler Kollaps bei Stress: wenn Urgency die Schwelle
+            #    überschreitet, bricht Zukunftsplanung zusammen → Impulsivität.
+            #    (Future_urgency=None schaltet antizipatorischen Modus aus)
+            _fu = (self.temporal_self.future_urgency()
+                   if self.use_temporal_self else None)
+            if _fu is not None and self._bl_collapse_threshold < 1.0:
+                if float(np.max(_fu[:2])) > self._bl_collapse_threshold:
+                    _fu = None  # Zukunft kollabiert → pure Gegenwart
+
+            # ③ Soziale Hypersensitivität: Gewicht des sozialen Priors erhöhen
+            _social = social_prior
+            if _social is not None and self._social_weight > 1.0:
+                _social = _social * self._social_weight
+            # ─────────────────────────────────────────────────────────────
+
             try:
                 action = self._aif.select_action(
                     row=self.row, col=self.col,
                     grid=self.env.grid,
                     dominant_need=self.dominant_need,
-                    wellbeing=self.wellbeing,
+                    wellbeing=_wellbeing,
                     northoff_precision=(
                         self.temporal.precision() if self.use_northoff else 1.0
                     ),
                     memory_priors=mem_priors if mem_priors else None,
-                    future_urgency=(
-                        self.temporal_self.future_urgency()
-                        if self.use_temporal_self else None
-                    ),
-                    social_prior=social_prior,
+                    future_urgency=_fu,
+                    social_prior=_social,
                     competition_factor=competition,
                     affordances=self.enactive_self.aif_signal(),
                     seeking_gain=self._seeking_gain,
