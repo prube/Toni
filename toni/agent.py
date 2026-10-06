@@ -56,6 +56,7 @@ class Toni:
                  depression_level: float = 0.0,
                  northoff_depression_level: float = 0.0,
                  borderline_level: float = 0.0,
+                 use_peer_model: bool = True,
                  policy_len: int = 2):
         self.env = env
         self.depression_level = float(np.clip(depression_level, 0.0, 1.0))
@@ -88,7 +89,7 @@ class Toni:
         self.temporal = TemporalDynamics(k_ext_scale=k_ext_scale)
         self.memory = AutobiographicalMemory()
         self.temporal_self = TemporalSelf(horizon=horizon, past_bias=past_bias_val)
-        self.social_self = SocialSelf()
+        self.social_self = SocialSelf(use_peer_model=use_peer_model)
         self.enactive_self = EnactiveSelf()
         self.use_northoff = use_northoff
         self.use_temporal_self = use_temporal_self
@@ -289,7 +290,7 @@ class Toni:
             # BALD dasselbe). Das ist Theory of Mind auf Körperebene.
             if self.social_self.agent_count > 0:
                 peer_urg = self.social_self.peer_urgency()
-                peer_competition_boost = 1.0 + float(peer_urg[self.dominant_need]) * 1.5
+                peer_competition_boost = 1.0 + float(peer_urg[self.dominant_need]) * 0.8
                 competition *= peer_competition_boost
 
             # ── Borderline-Modifikationen ────────────────────────────────

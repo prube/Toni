@@ -183,13 +183,14 @@ class SocialSelf:
       - Soziale Zusammenfassung für LLM-Kortex
     """
 
-    def __init__(self, memory: int = _MEMORY_DEFAULT):
+    def __init__(self, memory: int = _MEMORY_DEFAULT, use_peer_model: bool = True):
         self.memory = memory
+        self._use_peer_model = use_peer_model
         # agent_id → deque von SocialObservation
         self._obs: dict[str, deque] = {}
         # Kürzlich aufgezeichnete Konsumierungsevents: (pos, resource_type, t)
         self._consumption_log: deque = deque(maxlen=memory * 4)
-        # Temporales Selbst-Modell pro bekanntem Agenten
+        # Temporales Selbst-Modell pro bekanntem Agenten (nur wenn use_peer_model)
         self._peer_models: dict[str, PeerTemporalModel] = {}
         self._t: int = 0
 
@@ -209,10 +210,11 @@ class SocialSelf:
             if obs.resource_consumed is not None:
                 self._consumption_log.append((obs.position, obs.resource_consumed, obs.t))
 
-            # Peer-Temporal-Modell aktualisieren
-            if obs.agent_id not in self._peer_models:
-                self._peer_models[obs.agent_id] = PeerTemporalModel(obs.agent_id)
-            self._peer_models[obs.agent_id].update(obs)
+            # Peer-Temporal-Modell aktualisieren (nur wenn aktiviert)
+            if self._use_peer_model:
+                if obs.agent_id not in self._peer_models:
+                    self._peer_models[obs.agent_id] = PeerTemporalModel(obs.agent_id)
+                self._peer_models[obs.agent_id].update(obs)
 
     # ------------------------------------------------------------------ #
     #  Signale für AIF                                                     #
@@ -299,10 +301,17 @@ class SocialSelf:
           peer_urgency[0] = 0.8 bedeutet: "In ca. 8 Schritten braucht der
           andere Agent Nahrung dringend" — wenn ich auch Nahrung brauche,
           sollte ich jetzt handeln, bevor der andere die Ressource nimmt.
+
+        Nur kalibrierte Modelle werden genutzt (≥2 Konsum-Events pro
+        Ressourcentyp). Unkalibrierte Modelle liefern zu viele false positives
+        und stören die AIF-Policy.
         """
         if not self._peer_models:
             return np.zeros(2)
-        all_urgencies = np.array([m.future_urgency() for m in self._peer_models.values()])
+        calibrated = [m for m in self._peer_models.values() if m.is_calibrated]
+        if not calibrated:
+            return np.zeros(2)
+        all_urgencies = np.array([m.future_urgency() for m in calibrated])
         return np.max(all_urgencies, axis=0)
 
     # ------------------------------------------------------------------ #

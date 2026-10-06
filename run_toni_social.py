@@ -225,6 +225,22 @@ def main() -> None:
         consumption_events = len(sc._consumption_log)
         print(f"  Soziale Ereignisse beobachtet: {consumption_events}")
 
+        # PeerTemporalModel: Kalibrierungsstatus und vorhergesagte Urgency
+        for aid, model in sc._peer_models.items():
+            s = model.summary()
+            pu = model.future_urgency()
+            kalibriert = f"{G}✓ kalibriert{RESET}" if s["kalibriert"] else f"{Y}~ unkalibriert{RESET}"
+            print(f"  Peer-Modell ({aid}): {kalibriert}  "
+                  f"Events={s['konsum_events']}  "
+                  f"pred_E={pu[0]:.2f}  pred_H={pu[1]:.2f}")
+
+        # Durchschnittlicher Peer-Boost (aus history)
+        ph = agent.history.get("peer_urgency", [])
+        if ph:
+            avg_pu = np.mean([np.max(x) for x in ph])
+            max_pu = max(np.max(x) for x in ph)
+            print(f"  Ø Peer-Boost-Urgency: {avg_pu:.3f}  Max: {max_pu:.3f}")
+
     if api_calls > 0:
         print(f"\n  LLM-Reflexionen: {api_calls}  "
               f"Ø {api_time_total/api_calls:.1f}s/Reflexion")
