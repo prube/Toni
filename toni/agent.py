@@ -120,7 +120,7 @@ class Toni:
             "temperature": [], "integrity": [], "dominant_need": [],
             "oscillators": [], "position": [], "action": [],
             "precision": [], "arousal": [], "future_urgency": [],
-            "viability": [], "mobility": [],
+            "viability": [], "mobility": [], "peer_urgency": [],
         }
 
     # ------------------------------------------------------------------ #
@@ -272,13 +272,25 @@ class Toni:
                 self.social_self.social_position_prior(self.env.size)
                 if self.social_self.agent_count > 0 else None
             )
-            # Konkurrenz-Faktor
+            # Konkurrenz-Faktor (reaktiv: aktuelle Position/Bedürfnis)
             competition = (
                 self.social_self.competition_factor(
                     (self.row, self.col), self.dominant_need, self.env.size
                 )
                 if self.social_self.agent_count > 0 else 1.0
             )
+
+            # Antizipatorische Konkurrenz: peer_urgency modelliert die
+            # vorhergesagte Dringlichkeit des anderen Agenten aus seinen
+            # Konsum-Intervallen. Wenn der andere bald dieselbe Ressource
+            # braucht, handelt dieser Agent jetzt — bevor der andere kommt.
+            # Northoff: das Selbst positioniert sich sozial nicht nur reaktiv
+            # (andere sind HIER), sondern antizipatorisch (andere brauchen
+            # BALD dasselbe). Das ist Theory of Mind auf Körperebene.
+            if self.social_self.agent_count > 0:
+                peer_urg = self.social_self.peer_urgency()
+                peer_competition_boost = 1.0 + float(peer_urg[self.dominant_need]) * 1.5
+                competition *= peer_competition_boost
 
             # ── Borderline-Modifikationen ────────────────────────────────
             # ① Valenz-Rauschen: emotionale Dysregulation
@@ -477,6 +489,12 @@ class Toni:
         ea = self.enactive_self._last_affordances
         h["viability"].append(ea.get("viability", 0.0))
         h["mobility"].append(ea.get("mobility", 0.0))
+        # Peer-Urgency: vorhergesagte Dringlichkeit anderer Agenten (0 wenn solo)
+        h["peer_urgency"].append(
+            self.social_self.peer_urgency()[:2].copy()
+            if self.social_self.agent_count > 0
+            else np.zeros(2)
+        )
 
     @property
     def status(self) -> str:

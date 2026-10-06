@@ -117,6 +117,8 @@ Dieses Dringlichkeits-Signal konstituiert Northoffs Kernbehauptung: der Agent ha
 
 **SocialSelf** implementiert Northoffs relationale Achse. Wenn mehrere Agenten eine Welt teilen, generiert jeder bei jedem Schritt eine `SocialObservation`. Der beobachtende Agent aktualisiert seinen D-Prior (bevorzugt Orte, an denen andere konsumierten) und seinen Konkurrenzfaktor (erhöht C-Dringlichkeit, wenn ein anderer Agent mit demselben dominanten Bedürfnis auf dieselbe Ressource zugeht).
 
+**PeerTemporalModel** erweitert die soziale Schicht von reaktiv auf antizipatorisch. Aus dem beobachtbaren Strom der Konsum-Events des anderen Agenten werden Inter-Konsum-Intervalle inferiert und vorwärts projiziert: "Der andere Agent hat Wasser zuletzt vor 30 Schritten konsumiert, typisches Interval ist 45 Schritte — er wird in ~15 Schritten Wasser brauchen." Diese vorhergesagte Dringlichkeit wird genutzt, um den Konkurrenzfaktor zu erhöhen, *bevor* der andere Agent der Ressource auch nur nah ist. Die Implementierung rekonstruiert die Zeitstruktur des anderen Agenten rein aus verhaltensbeobachtbaren Daten (Konsum-Zeitpunkte) — ohne Zugriff auf Körperzustand, konsistent mit Northoff und Solms: Körpergefühl ist privat. Nach zwei Konsum-Events pro Ressourcentyp gilt das Modell als kalibriert. Die Dringlichkeitsformel ist identisch mit `TemporalSelf.future_urgency()`: Die soziale Zeitvorhersage ist strukturell parallel zur Selbstvorhersage — Northoffs Behauptung, dass soziale Positionierung temporal ist, nicht nur räumlich, wird als direktes funktionales Analogon implementiert.
+
 **EnactiveSelf** implementiert Autopoiese und Affordanzen. Viabilität erfasst, ob der Agent seine eigene Organisation aufrechterhalten kann:
 
 ```python
@@ -306,6 +308,7 @@ Toni implementiert funktionale Analoga von:
 - Northoffs Drei-Fenster-Temporal-Selbst (Vergangenheitstrend, Gegenwartwahrnehmung, Zukunftsprojektion)
 - Northoffs autobiografischem Gedächtnis (valenzgetönte spatiale Priors)
 - Northoffs sozialem Selbst (relationaler D-Prior und konkurrenzmodulierter C-Vektor)
+- Northoffs antizipatorischer sozialer Kognition (PeerTemporalModel: Inter-Konsum-Interval-Inferenz → vorhergesagte Peer-Dringlichkeit → präventiver Konkurrenz-Boost)
 - Fristons Active Inference (EFE-Minimierung via pymdp, dynamisch konstruiertes C/D/A)
 - Maturana/Varelas Autopoiese (Viabilität als operationelle Kapazität, getrennt von Wohlbefinden)
 - Gibsons Affordanzen (zustandsrelative Bedeutung aus Körper-Umwelt-Kopplung)
@@ -349,7 +352,7 @@ Dies würde eine Modifikation des `_select_action`-Mechanismus erfordern: bei `f
 
 **Gitterskala**: Ein 9×9-Gitter mit diskreten Zeitschritten komprimiert die temporalen Dynamiken, für die die Oszillator- und Temporal-Selbst-Modelle ausgelegt wurden.
 
-**Soziale Tiefe**: Die aktuelle soziale Schicht implementiert positionsbasierte Prior-Updates und Ressourcenkonkurrenz. Soziale Kognition höherer Ordnung — das temporale Selbst des anderen modellieren, die zukünftige Dringlichkeit des anderen voraussagen — ist noch nicht implementiert.
+**Soziale Tiefe**: Die soziale Schicht implementiert positionsbasierte Prior-Updates, reaktive Ressourcenkonkurrenz und antizipatorische Zeitkonkurrenz via `PeerTemporalModel`. Aus der Konsum-Timing-Zeitreihe inferiert jeder Agent den Depletionsrhythmus des anderen und handelt präventiv, wenn gemeinsamer Ressourcendruck vorhergesagt wird. Soziale Kognition höherer Ordnung — Modellierung der Ziele des anderen, täuschendes Signalisieren, gemeinsame Planung — ist nicht implementiert.
 
 **Enaktivistischer Regelkreisschluss**: Gibsons Affordanzen in Toni werden an der aktuellen Position des Agenten berechnet. Eine vollständigere enaktivistische Implementierung würde Affordanzen über den Bewegungsspielraum des Agenten berechnen — nicht nur "Wasser ist 2 Schritte entfernt", sondern "Wasser ist innerhalb meines viablen Aktionshorizonts erreichbar, angesichts aktueller Mobilität".
 

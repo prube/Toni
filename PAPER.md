@@ -119,6 +119,8 @@ This urgency signal constitutes Northoff's key claim: the agent acts *because it
 
 **SocialSelf** implements Northoff's relational axis. When multiple agents share a world, each generates a `SocialObservation` at each step. The observing agent updates its D-prior (preferring locations where others consumed) and its competition factor (increasing C-urgency when another agent with the same dominant need approaches the same resource). The self is constituted by its position among others.
 
+**PeerTemporalModel** extends the social layer from reactive to anticipatory social cognition. From an observable stream of the other agent's consume events, it infers the other agent's inter-consume intervals and projects forward: "the other agent last consumed water 30 steps ago, typical interval is 45 steps — they will need water in ~15 steps." This predicted urgency is used to boost the competition factor before the other agent is even close to the resource. The implementation reconstructs the temporal structure of the other agent purely from behavioral observables (consume timing) — without access to body state, consistent with Northoff and Solms: body feeling is private. After two consume events per resource type, the model is considered calibrated. The urgency formula is identical to `TemporalSelf.future_urgency()`, making the social temporal prediction structurally parallel to self-prediction: Northoff's claim that social positioning is temporal, not merely spatial, is implemented as a direct functional analog.
+
 **EnactiveSelf** implements autopoiesis and affordances. Viability captures whether the agent can maintain its own organization:
 
 ```python
@@ -302,6 +304,7 @@ Toni implements functional analogs of:
 - Northoff's three-window temporal self (past trend, present perception, future projection)
 - Northoff's autobiographical memory (valence-toned spatial priors)
 - Northoff's social self (relational D-prior and competition-modulated C-vector)
+- Northoff's anticipatory social cognition (PeerTemporalModel: inter-consume interval inference → predicted peer urgency → pre-emptive competition boost)
 - Friston's Active Inference (EFE minimization via pymdp, dynamically constituted C/D/A)
 - Maturana/Varela's autopoiesis (viability as operational capacity, distinct from wellbeing)
 - Gibson's affordances (state-relative meaning from body-environment coupling)
@@ -327,7 +330,7 @@ The practical consequence is that the LLM's phenomenological outputs are *about*
 
 **Grid scale**: a 9×9 grid with discrete time steps compresses the temporal dynamics that the oscillator and temporal self models were designed for. The theoretical frameworks were developed for biological systems operating on millisecond-to-day time scales.
 
-**Social depth**: the current social layer implements position-based prior update and resource competition. Higher-order social cognition — modeling the other's temporal self, predicting the other's future urgency — is not yet implemented.
+**Social depth**: the social layer implements position-based prior update, reactive resource competition, and anticipatory temporal competition via `PeerTemporalModel`. From consume-event timing, each agent infers the other's depletion rhythm and acts pre-emptively when shared resource pressure is predicted. Higher-order social cognition — modeling the other's goals, deceptive signaling, joint planning — is not implemented.
 
 **Enactivist loop closure**: Gibson's affordances in Toni are computed at the agent's current position. A fuller enactivist implementation would compute affordances over the agent's movement capabilities — not just "water is 2 steps away" but "water is reachable within my viable action horizon given current mobility".
 
